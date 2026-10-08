@@ -92,9 +92,9 @@ protected:
 	// Stereo in, stereo out.  Buffers may be the same (in-place).  Read parameters with `paramValue()`.
 	virtual void processAudio(const float *inL, const float *inR, float *outL, float *outR, uint32_t frames) = 0;
 
-	// UI page size in pixels, and the start page from the `ui/` folder
+	// UI page size in pixels, and the start page (the plugin's `ui/` folder is `/ui/` in the bundle)
 	uint32_t uiWidth = 400, uiHeight = 300;
-	const char *uiStartPage = "/index.html";
+	const char *uiStartPage = "/ui/index.html";
 
 	double paramValue(size_t index) const {
 		return params[index].value.load(std::memory_order_relaxed);

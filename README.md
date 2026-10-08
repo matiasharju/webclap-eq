@@ -52,7 +52,7 @@ plugins/airwindows Airwindows ports (DSP + ui/)
 tests/             headless smoke-test host
 ```
 
-Each plugin's `ui/` folder is compiled into its `module.wasm` and served through the `clap.webview` extension. UI and plugin exchange short text messages (see `shared/webclap/plugin.h`).
+Each plugin's `ui/` folder is packed into the bundle as `ui/` (openDAW loads UI pages from the bundle files) and also compiled into `module.wasm`, served through the `clap.webview` extension for other hosts. UI and plugin exchange short text messages (see `shared/webclap/plugin.h`).
 
 ## License
 

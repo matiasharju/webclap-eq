@@ -1,4 +1,4 @@
-# Run with `cmake -DRESOURCES_DIR=... -DOUTPUT=... -P embed-resources.cmake`
+# Run with `cmake -DRESOURCES_DIR=... -DPREFIX=/ui/ -DOUTPUT=... -P embed-resources.cmake`
 # Generates a .cpp file defining `webclap::embeddedResources` (see shared/webclap/resources.h)
 
 set(entries "")
@@ -37,7 +37,7 @@ foreach(relPath ${files})
 	string(REGEX REPLACE "(0x..,0x..,0x..,0x..,0x..,0x..,0x..,0x..,0x..,0x..,0x..,0x..,0x..,0x..,0x..,0x..,)" "\\1\n" hex "${hex}")
 
 	string(APPEND arrays "static const unsigned char resource${index}[] = {\n${hex}0};\n")
-	string(APPEND entries "\t{\"/${relPath}\", \"${mime}\", resource${index}, ${size}},\n")
+	string(APPEND entries "\t{\"${PREFIX}${relPath}\", \"${mime}\", resource${index}, ${size}},\n")
 	math(EXPR index "${index} + 1")
 endforeach()
 

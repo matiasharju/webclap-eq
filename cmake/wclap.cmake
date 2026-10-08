@@ -3,9 +3,10 @@
 # Builds `<name>/module.wasm` in the build directory, and packs it into
 # `dist/<name>.wclap.tar.gz` (the file you load into openDAW or another WCLAP host).
 #
-# Everything in RESOURCES_DIR (the web UI) is compiled into the module, and served
-# to the host through the `clap.webview` extension.  EXTRA_FILES are copied into the
-# bundle next to module.wasm (e.g. license texts).
+# Everything in RESOURCES_DIR (the web UI) ends up as `/ui/...` in two places:
+#   - as files in the bundle, which is where openDAW loads UI pages from
+#   - compiled into the module, served through `clap.webview`'s get_resource() for other hosts
+# EXTRA_FILES are copied into the bundle next to module.wasm (e.g. license texts).
 
 set(WCLAP_EMBED_SCRIPT ${CMAKE_CURRENT_LIST_DIR}/embed-resources.cmake)
 
@@ -21,7 +22,7 @@ function(add_wclap_bundle)
 	endif()
 	add_custom_command(
 		OUTPUT ${resourcesCpp}
-		COMMAND ${CMAKE_COMMAND} -DRESOURCES_DIR=${ARG_RESOURCES_DIR} -DOUTPUT=${resourcesCpp} -P ${WCLAP_EMBED_SCRIPT}
+		COMMAND ${CMAKE_COMMAND} -DRESOURCES_DIR=${ARG_RESOURCES_DIR} -DPREFIX=/ui/ -DOUTPUT=${resourcesCpp} -P ${WCLAP_EMBED_SCRIPT}
 		DEPENDS ${resourceFiles} ${WCLAP_EMBED_SCRIPT}
 		COMMENT "Embedding web UI for ${ARG_NAME}"
 	)
@@ -42,6 +43,13 @@ function(add_wclap_bundle)
 
 	set(archive ${CMAKE_SOURCE_DIR}/dist/${ARG_NAME}.wclap.tar.gz)
 	set(bundleContents module.wasm)
+	if (ARG_RESOURCES_DIR)
+		list(APPEND bundleContents ui)
+		add_custom_command(TARGET ${ARG_NAME} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E rm -rf ${bundleDir}/ui
+			COMMAND ${CMAKE_COMMAND} -E copy_directory ${ARG_RESOURCES_DIR} ${bundleDir}/ui
+		)
+	endif()
 	foreach(extra ${ARG_EXTRA_FILES})
 		get_filename_component(extraName ${extra} NAME)
 		list(APPEND bundleContents ${extraName})
