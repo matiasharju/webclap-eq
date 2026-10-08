@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Baxandall2</title>
+<style>
+	:root {
+		--bg: #1b1d22;
+		--panel: #23262d;
+		--grid: #343843;
+		--grid-strong: #4a4f5c;
+		--text: #e8eaef;
+		--muted: #8b919e;
+		--treble: #f2b544;
+		--bass: #4fa3f7;
+		--curve: #e8eaef;
+		--knob: #2d3139;
+		--knob-edge: #41464f;
+	}
+	* {
+		box-sizing: border-box;
+	}
+	html, body {
+		margin: 0;
+		width: 360px;
+		height: 290px;
+		overflow: hidden;
+		background: var(--bg);
+		color: var(--text);
+		font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+		user-select: none;
+		-webkit-user-select: none;
+	}
+	header {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		padding: 10px 14px 6px;
+	}
+	h1 {
+		margin: 0;
+		font-size: 15px;
+		font-weight: 650;
+		letter-spacing: 0.02em;
+	}
+	.credit {
+		font-size: 11px;
+		color: var(--muted);
+	}
+	#curve {
+		display: block;
+		margin: 0 14px;
+		width: 332px;
+		height: 96px;
+		background: var(--panel);
+		border-radius: 6px;
+	}
+	.knobs {
+		display: flex;
+		justify-content: space-around;
+		padding: 8px 20px 0;
+	}
+	.knob {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 2px;
+		width: 120px;
+		outline: none;
+		cursor: ns-resize;
+		touch-action: none;
+	}
+	.knob svg {
+		width: 84px;
+		height: 84px;
+		overflow: visible;
+	}
+	.knob .label {
+		font-size: 12px;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+	.knob .value {
+		font-size: 12px;
+		color: var(--muted);
+		font-variant-numeric: tabular-nums;
+	}
+	.knob:focus-visible svg .body {
+		stroke: var(--text);
+	}
+	.knob[data-key="treble"] { --accent: var(--treble); }
+	.knob[data-key="bass"] { --accent: var(--bass); }
+	.track {
+		fill: none;
+		stroke: var(--grid);
+		stroke-width: 6;
+		stroke-linecap: round;
+	}
+	.fill {
+		fill: none;
+		stroke: var(--accent);
+		stroke-width: 6;
+		stroke-linecap: round;
+	}
+	.body {
+		fill: var(--knob);
+		stroke: var(--knob-edge);
+		stroke-width: 1.5;
+	}
+	.pointer {
+		stroke: var(--accent);
+		stroke-width: 3;
+		stroke-linecap: round;
+	}
+	#hint {
+		margin-top: 10px;
+		text-align: center;
+		font-size: 10.5px;
+		color: var(--muted);
+	}
+</style>
+</head>
+<body>
+	<header>
+		<h1>Baxandall2</h1>
+		<span class="credit">tone control · by Airwindows</span>
+	</header>
+	<canvas id="curve" width="664" height="192"></canvas>
+	<div class="knobs">
+		<div class="knob" data-key="bass" role="slider" tabindex="0" aria-label="Bass" aria-valuemin="-24" aria-valuemax="24">
+			<svg viewBox="-50 -50 100 100"></svg>
+			<span class="label">Bass</span>
+			<span class="value"></span>
+		</div>
+		<div class="knob" data-key="treble" role="slider" tabindex="0" aria-label="Treble" aria-valuemin="-24" aria-valuemax="24">
+			<svg viewBox="-50 -50 100 100"></svg>
+			<span class="label">Treble</span>
+			<span class="value"></span>
+		</div>
+	</div>
+	<div id="hint">drag · shift = fine · double-click = reset</div>
+
+<script>
+	// ---- talking to the plugin (clap.webview: ArrayBuffer messages, plain text inside) ----
+
+	const standalone = (window.parent === window); // opened directly in a browser: demo mode
+	const encoder = new TextEncoder(), decoder = new TextDecoder();
+	function send(text) {
+		if (standalone) return;
+		window.parent.postMessage(encoder.encode(text).buffer, '*');
+	}
+
+	const state = {treble: 0, bass: 0, sampleRate: 48000};
+	const MIN = -24, MAX = 24;
+
+	window.addEventListener('message', e => {
+		let data = e.data;
+		if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) data = decoder.decode(data);
+		if (typeof data !== 'string') return;
+		const [command, a, b] = data.split(' ');
+		if (command === 'param' && a in state) {
+			state[a] = parseFloat(b);
+		} else if (command === 'samplerate') {
+			state.sampleRate = parseFloat(a);
+		}
+		render();
+	});
+
+	// ---- frequency response (exactly what the DSP does) ----
+	// y = treble*(x - LP1(x)) + bass*LP2(x), with each biquad interleaved over 2 samples: H(z^2)
+
+	function lowpass(fNorm, q) {
+		const K = Math.tan(Math.PI*fNorm), n = 1/(1 + K/q + K*K), a0 = K*K*n;
+		return {b0: a0, b1: 2*a0, b2: a0, a1: 2*(K*K - 1)*n, a2: (1 - K/q + K*K)*n};
+	}
+	function evaluate(c, w) {
+		const c1 = Math.cos(w), s1 = Math.sin(w), c2 = Math.cos(2*w), s2 = Math.sin(2*w);
+		const nr = c.b0 + c.b1*c1 + c.b2*c2, ni = -(c.b1*s1 + c.b2*s2);
+		const dr = 1 + c.a1*c1 + c.a2*c2, di = -(c.a1*s1 + c.a2*s2);
+		const d = dr*dr + di*di;
+		return [(nr*dr + ni*di)/d, (ni*dr - nr*di)/d];
+	}
+	function responseDb(freq) {
+		const sr = state.sampleRate;
+		const tg = Math.pow(10, state.treble/20), bg = Math.pow(10, state.bass/20);
+		const treble = lowpass(Math.min(4410*tg/sr, 0.45), 0.4);
+		const bass = lowpass(Math.min(8820/bg/sr, 0.45), 0.2);
+		const w = 2*(2*Math.PI*freq/sr);
+		const t = evaluate(treble, w), b = evaluate(bass, w);
+		const re = tg*(1 - t[0]) + bg*b[0], im = -tg*t[1] + bg*b[1];
+		return 10*Math.log10(re*re + im*im);
+	}
+
+	// ---- drawing ----
+
+	const canvas = document.getElementById('curve');
+	const ctx = canvas.getContext('2d');
+	const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+	const F_MIN = 20, F_MAX = 20000, DB_RANGE = 26;
+
+	function drawCurve() {
+		const w = canvas.width, h = canvas.height, s = w/332;
+		const xOf = f => Math.log(f/F_MIN)/Math.log(F_MAX/F_MIN)*w;
+		const yOf = db => h/2 - db/DB_RANGE*(h/2 - 6*s);
+		ctx.clearRect(0, 0, w, h);
+
+		// grid
+		ctx.lineWidth = s;
+		ctx.font = `${10*s}px system-ui, sans-serif`;
+		ctx.fillStyle = css('--muted');
+		for (const f of [50, 100, 200, 500, 1000, 2000, 5000, 10000]) {
+			ctx.strokeStyle = [100, 1000, 10000].includes(f) ? css('--grid-strong') : css('--grid');
+			ctx.beginPath();
+			ctx.moveTo(xOf(f), 0);
+			ctx.lineTo(xOf(f), h);
+			ctx.stroke();
+		}
+		ctx.fillText('100', xOf(100) + 3*s, h - 4*s);
+		ctx.fillText('1k', xOf(1000) + 3*s, h - 4*s);
+		ctx.fillText('10k', xOf(10000) + 3*s, h - 4*s);
+		for (const db of [-12, 12]) {
+			ctx.strokeStyle = css('--grid');
+			ctx.beginPath();
+			ctx.moveTo(0, yOf(db));
+			ctx.lineTo(w, yOf(db));
+			ctx.stroke();
+			ctx.fillText((db > 0 ? '+' : '') + db, 4*s, yOf(db) - 3*s);
+		}
+		ctx.strokeStyle = css('--grid-strong');
+		ctx.beginPath();
+		ctx.moveTo(0, yOf(0));
+		ctx.lineTo(w, yOf(0));
+		ctx.stroke();
+
+		// curve
+		const points = [];
+		for (let x = 0; x <= w; x += 2) {
+			const f = F_MIN*Math.pow(F_MAX/F_MIN, x/w);
+			const db = Math.max(-DB_RANGE, Math.min(DB_RANGE, responseDb(f)));
+			points.push([x, yOf(db)]);
+		}
+		const gradient = ctx.createLinearGradient(0, 0, w, 0);
+		gradient.addColorStop(0.15, css('--bass'));
+		gradient.addColorStop(0.85, css('--treble'));
+		ctx.beginPath();
+		ctx.moveTo(0, yOf(0));
+		points.forEach(([x, y]) => ctx.lineTo(x, y));
+		ctx.lineTo(w, yOf(0));
+		ctx.closePath();
+		ctx.globalAlpha = 0.18;
+		ctx.fillStyle = gradient;
+		ctx.fill();
+		ctx.globalAlpha = 1;
+		ctx.beginPath();
+		points.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+		ctx.strokeStyle = gradient;
+		ctx.lineWidth = 2.5*s;
+		ctx.lineJoin = 'round';
+		ctx.stroke();
+	}
+
+	// ---- knobs ----
+
+	const START = -135, END = 135; // degrees, 0 = straight up
+	const polar = (deg, r) => [r*Math.sin(deg*Math.PI/180), -r*Math.cos(deg*Math.PI/180)];
+	function arc(from, to, r) {
+		const [x1, y1] = polar(from, r), [x2, y2] = polar(to, r);
+		const large = Math.abs(to - from) > 180 ? 1 : 0, sweep = to > from ? 1 : 0;
+		return `M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 ${large} ${sweep} ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+	}
+	const valueToAngle = v => START + (v - MIN)/(MAX - MIN)*(END - START);
+	const format = v => `${v > 0.05 ? '+' : ''}${(Math.abs(v) < 0.05 ? 0 : v).toFixed(1)} dB`;
+
+	const knobs = [...document.querySelectorAll('.knob')];
+	function drawKnob(el) {
+		const v = state[el.dataset.key];
+		const angle = valueToAngle(v);
+		const [px, py] = polar(angle, 26);
+		el.querySelector('svg').innerHTML = `
+			<path class="track" d="${arc(START, END, 42)}"/>
+			${Math.abs(angle) > 0.5 ? `<path class="fill" d="${arc(0, angle, 42)}"/>` : ''}
+			<circle class="body" r="33"/>
+			<line class="pointer" x1="${(px*0.35).toFixed(2)}" y1="${(py*0.35).toFixed(2)}" x2="${px.toFixed(2)}" y2="${py.toFixed(2)}"/>`;
+		el.querySelector('.value').textContent = format(v);
+		el.setAttribute('aria-valuenow', v.toFixed(1));
+		el.setAttribute('aria-valuetext', format(v));
+	}
+
+	function setValue(key, v) {
+		v = Math.max(MIN, Math.min(MAX, v));
+		if (v === state[key]) return;
+		state[key] = v;
+		send(`set ${key} ${v}`);
+		render();
+	}
+	function gesture(key, fn) {
+		send(`begin ${key}`);
+		fn();
+		send(`end ${key}`);
+	}
+
+	knobs.forEach(el => {
+		const key = el.dataset.key;
+		let dragY = null, dragValue = 0;
+		el.addEventListener('pointerdown', e => {
+			if (e.button !== 0) return;
+			el.setPointerCapture(e.pointerId);
+			el.focus();
+			dragY = e.clientY;
+			dragValue = state[key];
+			send(`begin ${key}`);
+		});
+		el.addEventListener('pointermove', e => {
+			if (dragY === null) return;
+			const perPixel = e.shiftKey ? 0.04 : 0.25; // dB per pixel
+			dragValue += (dragY - e.clientY)*perPixel;
+			dragY = e.clientY;
+			setValue(key, Math.round(dragValue*10)/10);
+		});
+		const endDrag = () => {
+			if (dragY === null) return;
+			dragY = null;
+			send(`end ${key}`);
+		};
+		el.addEventListener('pointerup', endDrag);
+		el.addEventListener('pointercancel', endDrag);
+		el.addEventListener('dblclick', () => gesture(key, () => setValue(key, 0)));
+		el.addEventListener('wheel', e => {
+			e.preventDefault();
+			const step = e.shiftKey ? 0.1 : 0.5;
+			gesture(key, () => setValue(key, Math.round((state[key] - Math.sign(e.deltaY)*step)*10)/10));
+		}, {passive: false});
+		el.addEventListener('keydown', e => {
+			const step = e.shiftKey ? 0.1 : 1;
+			const changes = {ArrowUp: step, ArrowRight: step, ArrowDown: -step, ArrowLeft: -step, PageUp: 6, PageDown: -6};
+			if (e.key in changes) {
+				e.preventDefault();
+				gesture(key, () => setValue(key, Math.round((state[key] + changes[e.key])*10)/10));
+			} else if (e.key === 'Home' || e.key === '0' || e.key === 'Delete') {
+				e.preventDefault();
+				gesture(key, () => setValue(key, 0));
+			}
+		});
+	});
+
+	let frame = 0;
+	function render() {
+		if (frame) return;
+		frame = requestAnimationFrame(() => {
+			frame = 0;
+			knobs.forEach(drawKnob);
+			drawCurve();
+		});
+	}
+	render();
+	send('ready');
+</script>
+</body>
+</html>

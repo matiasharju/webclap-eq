@@ -1,0 +1,21 @@
+{
+	"version": 6,
+	"configurePresets": [
+		{
+			"name": "wasm",
+			"displayName": "WebCLAP (WASI-SDK, release)",
+			"generator": "Ninja",
+			"binaryDir": "${sourceDir}/build",
+			"toolchainFile": "${sourceDir}/cmake/wasi-toolchain.cmake",
+			"cacheVariables": {
+				"CMAKE_BUILD_TYPE": "Release"
+			}
+		}
+	],
+	"buildPresets": [
+		{
+			"name": "wasm",
+			"configurePreset": "wasm"
+		}
+	]
+}
