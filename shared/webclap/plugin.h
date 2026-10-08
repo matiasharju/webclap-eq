@@ -12,8 +12,12 @@
 // `reset()` and `processAudio()`.
 //
 // UI <-> plugin messages are short UTF-8 text lines, so they're easy to read while debugging:
-//   UI -> plugin:  "ready" | "set <key> <value>" | "begin <key>" | "end <key>"
+//   UI -> plugin:  "ready" | "poll" | "set <key> <value>" | "begin <key>" | "end <key>"
 //   plugin -> UI:  "param <key> <value>" | "samplerate <hz>"
+//
+// The UI sends "poll" regularly while it's open, and the plugin replies with anything that changed
+// (e.g. from automation).  Hosts should call `on_main_thread()` after `request_callback()` so we
+// could push updates ourselves, but not all do (openDAW, October 2026), so we don't rely on it.
 
 #include "clap/clap.h"
 #include "clap/ext/draft/webview.h"
@@ -525,6 +529,10 @@ private:
 			uiSampleRateSent.clear();
 			for (size_t i = 0; i < paramCount; ++i) params[i].uiUpToDate.clear();
 			sendUiUpdates();
+			return true;
+		} else if (message == "poll") {
+			uiOpen = true;
+			pluginOnMainThread();
 			return true;
 		}
 		int fields = std::sscanf(message.c_str(), "%15s %63s %lf", command, key, &value);

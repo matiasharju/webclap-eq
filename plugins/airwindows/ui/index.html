@@ -152,6 +152,7 @@
 	}
 
 	const state = {treble: 0, bass: 0, sampleRate: 48000};
+	let activeKey = null; // parameter currently being changed in this UI
 	const MIN = -24, MAX = 24;
 
 	window.addEventListener('message', e => {
@@ -160,6 +161,7 @@
 		if (typeof data !== 'string') return;
 		const [command, a, b] = data.split(' ');
 		if (command === 'param' && a in state) {
+			if (a === activeKey) return; // the user is moving this one, don't fight them
 			state[a] = parseFloat(b);
 		} else if (command === 'samplerate') {
 			state.sampleRate = parseFloat(a);
@@ -294,10 +296,18 @@
 		send(`set ${key} ${v}`);
 		render();
 	}
-	function gesture(key, fn) {
+	function beginGesture(key) {
+		activeKey = key;
 		send(`begin ${key}`);
-		fn();
+	}
+	function endGesture(key) {
 		send(`end ${key}`);
+		setTimeout(() => {if (activeKey === key) activeKey = null;}, 250); // let the host's echo settle
+	}
+	function gesture(key, fn) {
+		beginGesture(key);
+		fn();
+		endGesture(key);
 	}
 
 	knobs.forEach(el => {
@@ -309,7 +319,7 @@
 			el.focus();
 			dragY = e.clientY;
 			dragValue = state[key];
-			send(`begin ${key}`);
+			beginGesture(key);
 		});
 		el.addEventListener('pointermove', e => {
 			if (dragY === null) return;
@@ -321,7 +331,7 @@
 		const endDrag = () => {
 			if (dragY === null) return;
 			dragY = null;
-			send(`end ${key}`);
+			endGesture(key);
 		};
 		el.addEventListener('pointerup', endDrag);
 		el.addEventListener('pointercancel', endDrag);
@@ -355,6 +365,10 @@
 	}
 	render();
 	send('ready');
+	// ask for changes made elsewhere (automation, the host's own controls) while we're visible
+	setInterval(() => {
+		if (document.visibilityState === 'visible') send('poll');
+	}, 33);
 </script>
 </body>
 </html>

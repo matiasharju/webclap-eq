@@ -355,10 +355,22 @@ for (let pluginIndex = 0; pluginIndex < pluginCount; ++pluginIndex) {
 		const flushesBefore = hostLog.flushes;
 		uiReceive('begin treble'); uiReceive('set treble 6.5'); uiReceive('end treble');
 		check(hostLog.flushes > flushesBefore, 'UI change requests a parameter flush');
+
 		outputEvents = [];
 		fn(u32(params + 20))(plugin, inEventsStruct, outEventsStruct);
 		check(outputEvents.map(e => e.type).join(',') === '7,5,8' && outputEvents[1]?.value === 6.5,
 			`host receives gesture-begin, value 6.5, gesture-end (got ${JSON.stringify(outputEvents)})`);
+		// automation from the host must reach the UI, even if the host never calls on_main_thread()
+		if (paramInfo.treble) {
+			inputEvents = [paramEvent(paramInfo.treble.id, -3.5)];
+			measureGainDb(1000);
+			hostLog.uiMessages = [];
+			uiReceive('poll');
+			check(hostLog.uiMessages.includes('param treble -3.5'), `automation reaches the UI on "poll" (got ${JSON.stringify(hostLog.uiMessages)})`);
+			hostLog.uiMessages = [];
+			uiReceive('poll');
+			check(hostLog.uiMessages.length === 0, 'nothing is re-sent when nothing changed');
+		}
 	}
 
 	// ---- shutdown ----
