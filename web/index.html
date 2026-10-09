@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebCLAP EQ</title>
+<meta name="description" content="Free EQ plugins for browser DAWs such as openDAW, made for schools.">
+<style>
+	:root {
+		--bg: #f6f7f9;
+		--card: #ffffff;
+		--edge: #dfe2e8;
+		--text: #1b1d22;
+		--muted: #5d6370;
+		--accent: #2f6fd6;
+		--accent-text: #ffffff;
+		--code: #eceef2;
+	}
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--bg: #1a1c21;
+			--card: #22252c;
+			--edge: #2e323b;
+			--text: #e8eaef;
+			--muted: #9aa0ac;
+			--accent: #4f9cf5;
+			--accent-text: #0e1116;
+			--code: #2c3038;
+		}
+	}
+	* {
+		box-sizing: border-box;
+	}
+	body {
+		margin: 0;
+		background: var(--bg);
+		color: var(--text);
+		font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	}
+	main {
+		max-width: 760px;
+		margin: 0 auto;
+		padding: 40px 16px 64px;
+	}
+	h1 {
+		margin: 0 0 6px;
+		font-size: 30px;
+		letter-spacing: -0.01em;
+	}
+	h2 {
+		margin: 40px 0 12px;
+		font-size: 20px;
+	}
+	.lead {
+		margin: 0;
+		color: var(--muted);
+		font-size: 18px;
+	}
+	.plugin {
+		margin: 16px 0;
+		padding: 18px 20px;
+		background: var(--card);
+		border: 1px solid var(--edge);
+		border-left: 4px solid var(--stripe);
+		border-radius: 8px;
+	}
+	.plugin h3 {
+		margin: 0 0 4px;
+		font-size: 18px;
+	}
+	.plugin p {
+		margin: 0 0 14px;
+		color: var(--muted);
+	}
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+	.button {
+		display: inline-block;
+		padding: 7px 14px;
+		border: 1px solid var(--accent);
+		border-radius: 6px;
+		color: var(--accent);
+		font-weight: 600;
+		font-size: 15px;
+		text-decoration: none;
+	}
+	.button.primary {
+		background: var(--accent);
+		color: var(--accent-text);
+	}
+	ol, ul {
+		padding-left: 22px;
+	}
+	li {
+		margin: 4px 0;
+	}
+	code {
+		padding: 1px 5px;
+		background: var(--code);
+		border-radius: 4px;
+		font-size: 0.9em;
+	}
+	a {
+		color: var(--accent);
+	}
+	footer {
+		margin-top: 48px;
+		color: var(--muted);
+		font-size: 14px;
+	}
+</style>
+</head>
+<body>
+<main>
+	<h1>WebCLAP EQ</h1>
+	<p class="lead">Free EQ plugins that run in the browser, in DAWs such as <a href="https://opendaw.studio">openDAW</a>. Nothing to install. Made for students and teachers.</p>
+
+	<h2>Plugins</h2>
+
+	<section class="plugin" style="--stripe: #4f9cf5">
+		<h3>Console EQ</h3>
+		<p>A channel EQ in the style of a British mixing console: high-pass and low-pass filters, low and high bands that switch between shelf and bell, and two mid bands with adjustable width (Q).</p>
+		<div class="actions">
+			<a class="button primary" href="download/webclap-eq-console.wclap.tar.gz" download>Download</a>
+			<a class="button" href="demo/console/index.html">Try the controls</a>
+		</div>
+	</section>
+
+	<section class="plugin" style="--stripe: #f2b544">
+		<h3>Baxandall2 (Airwindows)</h3>
+		<p>Simple bass and treble tone controls, ported from <a href="https://www.airwindows.com/baxandall2/">Airwindows Baxandall2</a> by Chris Johnson.</p>
+		<div class="actions">
+			<a class="button primary" href="download/webclap-eq-airwindows.wclap.tar.gz" download>Download</a>
+			<a class="button" href="demo/airwindows/index.html">Try the controls</a>
+		</div>
+	</section>
+
+	<p>"Try the controls" opens the plugin's controls in your browser without sound, so you can see how the knobs and the curve work.</p>
+
+	<h2>Using a plugin in openDAW</h2>
+	<ol>
+		<li>Download the plugin file. Keep it as it is, a <code>.wclap.tar.gz</code> file; there's no need to unpack it.</li>
+		<li>In openDAW, import the file as a WebCLAP plugin.</li>
+		<li>Add the plugin as an effect on an audio track and open its window.</li>
+	</ol>
+
+	<h2>For school IT</h2>
+	<p>openDAW shows plugin windows from a separate address. If plugin windows show a "blocked page" message, allow both of these sites:</p>
+	<ul>
+		<li><code>opendaw.studio</code></li>
+		<li><code>opendaw-plugins.studio</code></li>
+	</ul>
+
+	<footer>
+		Open source (MIT license), on <a href="https://github.com/matiasharju/webclap-eq">GitHub</a>.
+		Baxandall2 DSP by Chris Johnson / <a href="https://www.airwindows.com">Airwindows</a> (MIT).
+		WebCLAP is a <a href="https://github.com/WebCLAP">community project</a> based on the <a href="https://cleveraudio.org">CLAP</a> plugin standard.
+	</footer>
+</main>
+</body>
+</html>
