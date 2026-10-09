@@ -26,11 +26,13 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <string>
+#include <strings.h>
 #include <vector>
 
 namespace webclap {
@@ -57,6 +59,10 @@ struct ParamSpec {
 	const char *unit;
 	double min, max, defaultValue;
 	int decimals = 1;
+	// Switches: one label per whole value from `min` to `max` (e.g. {"Off", "On"}), makes the parameter stepped
+	const char * const *labels = nullptr;
+	// Group shown by the host, e.g. "HF" (CLAP's `module` path)
+	const char *module = "";
 };
 
 class Plugin {
@@ -123,6 +129,7 @@ private:
 		double clamp(double v) const {
 			if (!(v >= spec.min)) return spec.min; // also catches NaN
 			if (v > spec.max) return spec.max;
+			if (spec.labels) return std::round(v);
 			return v;
 		}
 	};
@@ -384,7 +391,7 @@ private:
 		auto &spec = params[index].spec;
 		*info = {
 			.id=spec.id,
-			.flags=CLAP_PARAM_IS_AUTOMATABLE,
+			.flags=CLAP_PARAM_IS_AUTOMATABLE | (spec.labels ? CLAP_PARAM_IS_STEPPED : 0u),
 			.cookie=nullptr,
 			.name={},
 			.module={},
@@ -393,6 +400,7 @@ private:
 			.default_value=spec.defaultValue
 		};
 		std::strncpy(info->name, spec.name, CLAP_NAME_SIZE - 1);
+		std::strncpy(info->module, spec.module, CLAP_PATH_SIZE - 1);
 		return true;
 	}
 	bool paramsGetValue(clap_id id, double *value) {
@@ -404,12 +412,26 @@ private:
 	bool paramsValueToText(clap_id id, double value, char *text, uint32_t capacity) {
 		auto *param = findParam(id);
 		if (!param) return false;
-		std::snprintf(text, capacity, "%.*f %s", param->spec.decimals, value, param->spec.unit);
+		if (param->spec.labels) {
+			std::snprintf(text, capacity, "%s", param->spec.labels[size_t(param->clamp(value) - param->spec.min)]);
+		} else if (!std::strcmp(param->spec.unit, "Hz") && value >= 1000) {
+			std::snprintf(text, capacity, "%.*f kHz", value < 10000 ? 2 : 1, value/1000);
+		} else {
+			std::snprintf(text, capacity, "%.*f%s%s", param->spec.decimals, value, *param->spec.unit ? " " : "", param->spec.unit);
+		}
 		return true;
 	}
 	bool paramsTextToValue(clap_id id, const char *text, double *value) {
 		auto *param = findParam(id);
 		if (!param) return false;
+		if (param->spec.labels) {
+			for (int i = 0; i <= int(param->spec.max - param->spec.min); ++i) {
+				if (!strcasecmp(text, param->spec.labels[i])) {
+					*value = param->spec.min + i;
+					return true;
+				}
+			}
+		}
 		char *end = nullptr;
 		double v = std::strtod(text, &end);
 		if (end == text) return false;

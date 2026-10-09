@@ -231,17 +231,20 @@ for (let pluginIndex = 0; pluginIndex < pluginCount; ++pluginIndex) {
 
 	// parameters
 	const params = ext('clap.params');
-	const paramInfo = {};
+	const paramList = [];
 	if (check(params, 'has clap.params')) {
 		const count = fn(u32(params))(plugin);
 		const info = malloc(1320);
 		for (let i = 0; i < count; ++i) {
 			fn(u32(params + 4))(plugin, i, info);
-			const p = {id: u32(info), name: cString(info + 12), min: f64(info + 1296), max: f64(info + 1304), def: f64(info + 1312)};
+			const p = {
+				id: u32(info), stepped: (u32(info + 4) & 1) !== 0, name: cString(info + 12), module: cString(info + 268),
+				min: f64(info + 1296), max: f64(info + 1304), def: f64(info + 1312)
+			};
 			const text = malloc(64);
 			fn(u32(params + 12))(plugin, p.id, p.def, text, 64);
-			console.log(`    param ${p.id} "${p.name}" ${p.min}..${p.max}, default ${cString(text)}`);
-			paramInfo[p.name.toLowerCase()] = p;
+			console.log(`    param ${String(p.id).padStart(3)} ${(p.module ? p.module + '/' : '') + p.name}: ${p.min}..${p.max}${p.stepped ? ' (stepped)' : ''}, default ${cString(text)}`);
+			paramList.push(p);
 		}
 	}
 	check(ext('clap.audio-ports'), 'has clap.audio-ports');
@@ -251,6 +254,16 @@ for (let pluginIndex = 0; pluginIndex < pluginCount; ++pluginIndex) {
 	check(webview, 'has clap.webview/3');
 	const gui = ext('clap.gui');
 	check(gui && fn(u32(gui))(plugin, allocString('webview'), 0), 'clap.gui supports the "webview" API');
+
+	// Our plugins save "key value" lines in parameter order, which tells us the keys the UI and response.js use
+	streamBuffer = [];
+	check(fn(u32(state))(plugin, ostream), 'state.save()');
+	const initialState = Buffer.from(streamBuffer).toString();
+	const ourPlugin = initialState.startsWith('webclap-state ');
+	if (ourPlugin) {
+		initialState.split('\n').slice(1).filter(Boolean).forEach((line, i) => paramList[i].key = line.split(' ')[0]);
+	}
+	const firstKnob = paramList.find(p => !p.stepped && p.key);
 
 	// ---- audio ----
 	const sampleRate = 48000, block = 512;
@@ -276,9 +289,11 @@ for (let pluginIndex = 0; pluginIndex < pluginCount; ++pluginIndex) {
 		return e;
 	};
 	let phase = 0, allFinite = true;
+	// Steady-state gain of a sine at `freq`, measured over a whole number of periods
 	function measureGainDb(freq) {
-		let sumIn = 0, sumOut = 0;
-		for (let b = 0; b < 40; ++b) {
+		const settleBlocks = 20, measureBlocks = 20;
+		const inSamples = [], outSamples = [];
+		for (let b = 0; b < settleBlocks + measureBlocks; ++b) {
 			const f32 = new Float32Array(memory.buffer);
 			for (let i = 0; i < block; ++i) {
 				const x = 0.25*Math.sin(phase);
@@ -292,43 +307,68 @@ for (let pluginIndex = 0; pluginIndex < pluginCount; ++pluginIndex) {
 			for (let i = 0; i < block; ++i) {
 				const l = out[bufOut[0]/4 + i], r = out[bufOut[1]/4 + i];
 				if (!Number.isFinite(l) || !Number.isFinite(r)) allFinite = false;
-				if (b >= 20) {sumIn += out[bufIn[0]/4 + i]**2; sumOut += l*l;}
+				if (b >= settleBlocks) {inSamples.push(out[bufIn[0]/4 + i]); outSamples.push(l);}
 			}
 		}
+		const periods = Math.floor(inSamples.length*freq/sampleRate);
+		const length = periods > 0 ? Math.round(periods*sampleRate/freq) : inSamples.length;
+		let sumIn = 0, sumOut = 0;
+		for (let i = 0; i < length; ++i) {sumIn += inSamples[i]**2; sumOut += outSamples[i]**2;}
 		return 10*Math.log10(sumOut/sumIn);
 	}
-	const freqs = [50, 200, 1000, 5000, 15000];
-	const response = (label) => {
-		const gains = freqs.map(f => measureGainDb(f));
-		console.log(`    ${label.padEnd(26)} ${freqs.map((f, i) => `${f}Hz ${gains[i] >= 0 ? '+' : ''}${gains[i].toFixed(1)}`).join('  ')}`);
-		return gains;
+	const setParams = (values) => {
+		inputEvents = paramList.filter(p => p.key in values).map(p => paramEvent(p.id, values[p.key]));
 	};
-	const flat = response('defaults:');
-	if (paramInfo.treble && paramInfo.bass) {
-		inputEvents = [paramEvent(paramInfo.treble.id, 12)];
-		const treble = response('treble +12 dB:');
-		check(treble[4] - flat[4] > 6 && Math.abs(treble[0] - flat[0]) < 2, 'treble boosts highs, leaves lows');
-		inputEvents = [paramEvent(paramInfo.treble.id, 0), paramEvent(paramInfo.bass.id, -12)];
-		const bass = response('treble 0, bass -12 dB:');
-		check(flat[0] - bass[0] > 6 && Math.abs(bass[4] - flat[4]) < 2, 'bass cut reduces lows, leaves highs');
+
+	const freqs = [40, 100, 250, 600, 1500, 4000, 9000, 15000];
+	const modelSource = files['ui/response.js'];
+	if (modelSource && ourPlugin) {
+		// The UI's curve must match what the audio actually does
+		const model = {exports: {}};
+		new Function('module', modelSource.toString())(model);
+		let seed = 12345;
+		const random = () => {seed = (seed*1664525 + 1013904223) >>> 0; return seed/4294967296;};
+		const randomValue = (p) => {
+			if (p.stepped) return p.min + Math.floor(random()*(p.max - p.min + 1));
+			if (p.min > 0 && p.max/p.min >= 10) return p.min*Math.pow(p.max/p.min, random()); // e.g. frequencies
+			return Math.round((p.min + random()*(p.max - p.min))*10)/10;
+		};
+		const cases = [Object.fromEntries(paramList.map(p => [p.key, p.def]))];
+		for (let i = 0; i < 12; ++i) cases.push(Object.fromEntries(paramList.map(p => [p.key, randomValue(p)])));
+
+		let worst = 0;
+		cases.forEach((values, caseIndex) => {
+			setParams(values);
+			const measured = freqs.map(f => measureGainDb(f));
+			const expected = freqs.map(f => model.exports.responseDb(values, sampleRate, f));
+			const errors = measured.map((m, i) => Math.abs(m - expected[i]) - (expected[i] < -30 ? 1 : 0)); // deep cuts: allow 1 dB more
+			const caseWorst = Math.max(...errors);
+			worst = Math.max(worst, caseWorst);
+			const label = caseIndex ? `random #${caseIndex}` : 'defaults';
+			console.log(`    ${label.padEnd(10)} ${measured.map((m, i) => `${freqs[i] >= 1000 ? freqs[i]/1000 + 'k' : freqs[i]}:${m >= 0 ? '+' : ''}${m.toFixed(1)}`).join(' ')}`);
+			if (caseWorst > 0.2) console.log(`      expected   ${expected.map(e => e.toFixed(1)).join(' ')}\n      settings   ${JSON.stringify(values)}`);
+		});
+		check(worst <= 0.2, `measured response matches the UI curve (ui/response.js) in ${cases.length} settings, worst error ${worst.toFixed(3)} dB`);
+	} else {
+		const gains = freqs.map(f => measureGainDb(f));
+		console.log(`    defaults   ${gains.map((g, i) => `${freqs[i]}:${g.toFixed(1)}`).join(' ')}`);
 	}
 	check(allFinite, 'output is always finite (no NaN/Inf)');
 
 	// ---- state ----
-	streamBuffer = [];
-	check(fn(u32(state))(plugin, ostream), 'state.save()');
-	const savedText = Buffer.from(streamBuffer).toString();
-	console.log('    saved: ' + JSON.stringify(savedText));
-	inputEvents = [paramEvent(paramInfo.bass?.id ?? 0, 5)];
-	outputEvents = [];
-	fn(u32(params + 20))(plugin, inEventsStruct, outEventsStruct); // flush
-	inputEvents = [];
-	streamReadPos = 0;
-	check(fn(u32(state + 4))(plugin, istream), 'state.load()');
-	const value = malloc(8);
-	if (paramInfo.bass) {
-		fn(u32(params + 8))(plugin, paramInfo.bass.id, value);
-		check(f64(value) === -12, `bass restored to -12 after load (got ${f64(value)})`);
+	if (ourPlugin && firstKnob) {
+		streamBuffer = [];
+		check(fn(u32(state))(plugin, ostream), 'state.save()');
+		const savedText = Buffer.from(streamBuffer).toString();
+		const savedValue = parseFloat(savedText.split('\n').find(l => l.startsWith(firstKnob.key + ' ')).split(' ')[1]);
+		inputEvents = [paramEvent(firstKnob.id, firstKnob.min)];
+		fn(u32(params + 20))(plugin, inEventsStruct, outEventsStruct); // flush
+		inputEvents = [];
+		streamReadPos = 0;
+		check(fn(u32(state + 4))(plugin, istream), 'state.load()');
+		const value = malloc(8);
+		fn(u32(params + 8))(plugin, firstKnob.id, value);
+		check(f64(value) === savedValue, `${firstKnob.key} restored to ${savedValue} after load (got ${f64(value)})`);
 	}
 
 	// ---- webview ----
@@ -336,7 +376,7 @@ for (let pluginIndex = 0; pluginIndex < pluginCount; ++pluginIndex) {
 	const uri = malloc(uriLength);
 	fn(u32(webview))(plugin, uri, uriLength);
 	const startPage = cString(uri);
-	if (!startPage?.startsWith('/')) {
+	if (!startPage?.startsWith('/') || !firstKnob) {
 		console.log(`    webview start page ${startPage} is not served by get_resource() - skipping UI checks`);
 	} else {
 		console.log(`    webview start page: ${startPage}`);
@@ -346,31 +386,32 @@ for (let pluginIndex = 0; pluginIndex < pluginCount; ++pluginIndex) {
 			`get_resource(${startPage}) -> ${cString(mime)}, ${streamBuffer.length} bytes`);
 		check(!fn(u32(webview + 4))(plugin, allocString('/does-not-exist'), mime, 64, ostream), 'unknown resource is rejected');
 
+		const key = firstKnob.key;
+		const uiValue = Math.round((firstKnob.min + 0.75*(firstKnob.max - firstKnob.min))*2)/2;
+		const automationValue = Math.round((firstKnob.min + 0.25*(firstKnob.max - firstKnob.min))*2)/2;
 		const uiReceive = (text) => {const enc = Buffer.from(text); const p = malloc(enc.length); bytes().set(enc, p); return fn(u32(webview + 8))(plugin, p, enc.length);};
 		hostLog.uiMessages = [];
 		check(uiReceive('ready'), 'UI "ready" accepted');
-		console.log('    plugin -> UI: ' + JSON.stringify(hostLog.uiMessages));
 		check(hostLog.uiMessages.some(m => m.startsWith('samplerate 48000')), 'UI is told the sample rate');
-		check(hostLog.uiMessages.some(m => m.startsWith('param treble')), 'UI is told the parameter values');
+		check(paramList.every(p => hostLog.uiMessages.some(m => m.startsWith(`param ${p.key} `))), `UI is told all ${paramList.length} parameter values`);
 		const flushesBefore = hostLog.flushes;
-		uiReceive('begin treble'); uiReceive('set treble 6.5'); uiReceive('end treble');
+		uiReceive(`begin ${key}`); uiReceive(`set ${key} ${uiValue}`); uiReceive(`end ${key}`);
 		check(hostLog.flushes > flushesBefore, 'UI change requests a parameter flush');
 
 		outputEvents = [];
 		fn(u32(params + 20))(plugin, inEventsStruct, outEventsStruct);
-		check(outputEvents.map(e => e.type).join(',') === '7,5,8' && outputEvents[1]?.value === 6.5,
-			`host receives gesture-begin, value 6.5, gesture-end (got ${JSON.stringify(outputEvents)})`);
+		check(outputEvents.map(e => e.type).join(',') === '7,5,8' && outputEvents[1]?.value === uiValue,
+			`host receives gesture-begin, value ${uiValue}, gesture-end (got ${JSON.stringify(outputEvents)})`);
+
 		// automation from the host must reach the UI, even if the host never calls on_main_thread()
-		if (paramInfo.treble) {
-			inputEvents = [paramEvent(paramInfo.treble.id, -3.5)];
-			measureGainDb(1000);
-			hostLog.uiMessages = [];
-			uiReceive('poll');
-			check(hostLog.uiMessages.includes('param treble -3.5'), `automation reaches the UI on "poll" (got ${JSON.stringify(hostLog.uiMessages)})`);
-			hostLog.uiMessages = [];
-			uiReceive('poll');
-			check(hostLog.uiMessages.length === 0, 'nothing is re-sent when nothing changed');
-		}
+		inputEvents = [paramEvent(firstKnob.id, automationValue)];
+		measureGainDb(1000);
+		hostLog.uiMessages = [];
+		uiReceive('poll');
+		check(hostLog.uiMessages.includes(`param ${key} ${automationValue}`), `automation reaches the UI on "poll" (got ${JSON.stringify(hostLog.uiMessages)})`);
+		hostLog.uiMessages = [];
+		uiReceive('poll');
+		check(hostLog.uiMessages.length === 0, 'nothing is re-sent when nothing changed');
 	}
 
 	// ---- shutdown ----

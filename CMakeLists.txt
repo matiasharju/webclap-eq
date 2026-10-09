@@ -35,3 +35,13 @@ add_wclap_bundle(
 	RESOURCES_DIR ${CMAKE_CURRENT_LIST_DIR}/plugins/airwindows/ui
 	EXTRA_FILES ${CMAKE_CURRENT_LIST_DIR}/LICENSE.txt
 )
+
+# ---- Console EQ ----
+
+add_wclap_bundle(
+	NAME webclap-eq-console
+	SOURCES
+		${CMAKE_CURRENT_LIST_DIR}/plugins/console/entry.cpp
+	RESOURCES_DIR ${CMAKE_CURRENT_LIST_DIR}/plugins/console/ui
+	EXTRA_FILES ${CMAKE_CURRENT_LIST_DIR}/LICENSE.txt
+)

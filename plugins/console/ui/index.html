@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Console EQ</title>
+<style>
+	:root {
+		--bg: #1a1c21;
+		--panel: #22252c;
+		--panel-edge: #2e323b;
+		--grid: #30343e;
+		--grid-strong: #454a56;
+		--text: #e8eaef;
+		--muted: #8b919e;
+		--knob: #2c3038;
+		--knob-edge: #444952;
+		--filters: #a3a9b5;
+		--lf: #e2a245;
+		--lmf: #4f9cf5;
+		--hmf: #49c27d;
+		--hf: #ee5d5d;
+		--master: #e8eaef;
+	}
+	* {
+		box-sizing: border-box;
+	}
+	html, body {
+		margin: 0;
+		width: 640px;
+		height: 420px;
+		overflow: hidden;
+		background: var(--bg);
+		color: var(--text);
+		font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+		user-select: none;
+		-webkit-user-select: none;
+	}
+	header {
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+		height: 34px;
+		padding: 10px 14px 0;
+	}
+	h1 {
+		margin: 0;
+		font-size: 15px;
+		font-weight: 650;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+	.subtitle {
+		font-size: 11px;
+		color: var(--muted);
+	}
+	#curve {
+		display: block;
+		margin: 0 14px;
+		width: 612px;
+		height: 120px;
+		background: var(--panel);
+		border-radius: 6px;
+	}
+	.strip {
+		display: grid;
+		grid-template-columns: repeat(6, 1fr);
+		gap: 6px;
+		margin: 10px 14px 0;
+		height: 220px;
+	}
+	.section {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: space-between;
+		min-height: 0;
+		overflow: hidden;
+		padding: 5px 0 6px;
+		background: var(--panel);
+		border: 1px solid var(--panel-edge);
+		border-top: 3px solid var(--accent);
+		border-radius: 6px;
+	}
+	.section h2 {
+		margin: 0;
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		color: var(--accent);
+	}
+	.section[data-band="filters"] { --accent: var(--filters); }
+	.section[data-band="lf"] { --accent: var(--lf); }
+	.section[data-band="lmf"] { --accent: var(--lmf); }
+	.section[data-band="hmf"] { --accent: var(--hmf); }
+	.section[data-band="hf"] { --accent: var(--hf); }
+	.section[data-band="master"] { --accent: var(--master); }
+	.section.bypassed {
+		opacity: 0.45;
+	}
+
+	.knob {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		width: 100%;
+		outline: none;
+		cursor: ns-resize;
+		touch-action: none;
+	}
+	.knob svg {
+		width: 36px;
+		height: 36px;
+		overflow: visible;
+	}
+	.knob.big svg {
+		width: 46px;
+		height: 46px;
+	}
+	.knob .label {
+		margin-top: 1px;
+		font-size: 9.5px;
+		line-height: 11px;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		color: var(--muted);
+	}
+	.knob .value {
+		font-size: 11px;
+		line-height: 13px;
+		font-variant-numeric: tabular-nums;
+	}
+	.knob:focus-visible .body {
+		stroke: var(--text);
+	}
+	.track {
+		fill: none;
+		stroke: var(--grid);
+		stroke-width: 6;
+		stroke-linecap: round;
+	}
+	.fill {
+		fill: none;
+		stroke: var(--accent);
+		stroke-width: 6;
+		stroke-linecap: round;
+	}
+	.body {
+		fill: var(--knob);
+		stroke: var(--knob-edge);
+		stroke-width: 1.5;
+	}
+	.pointer {
+		stroke: var(--accent);
+		stroke-width: 4;
+		stroke-linecap: round;
+	}
+
+	.toggle {
+		min-width: 54px;
+		padding: 3px 8px;
+		border: 1px solid var(--knob-edge);
+		border-radius: 10px;
+		background: var(--knob);
+		color: var(--muted);
+		font: 600 10px system-ui, sans-serif;
+		letter-spacing: 0.08em;
+		cursor: pointer;
+	}
+	.toggle[aria-pressed="true"] {
+		border-color: var(--accent);
+		background: color-mix(in srgb, var(--accent) 25%, var(--knob));
+		color: var(--text);
+	}
+	.toggle:focus-visible {
+		outline: 1px solid var(--text);
+	}
+
+	#hint {
+		height: 32px;
+		margin: 0 14px;
+		padding-top: 7px;
+		font-size: 11.5px;
+		line-height: 1.3;
+		color: var(--muted);
+		text-align: center;
+	}
+	#hint b {
+		color: var(--text);
+		font-weight: 600;
+	}
+</style>
+</head>
+<body>
+	<header>
+		<h1>Console EQ</h1>
+		<span class="subtitle">British-style channel EQ</span>
+	</header>
+	<canvas id="curve" width="1224" height="240"></canvas>
+
+	<div class="strip">
+		<div class="section" data-band="filters">
+			<h2>FILTERS</h2>
+			<div class="knob" data-key="hpfFreq" data-label="HPF"></div>
+			<button class="toggle" data-key="hpfOn">HPF</button>
+			<div class="knob" data-key="lpfFreq" data-label="LPF"></div>
+			<button class="toggle" data-key="lpfOn">LPF</button>
+		</div>
+		<div class="section" data-band="lf">
+			<h2>LF</h2>
+			<div class="knob big" data-key="lfGain" data-label="GAIN"></div>
+			<div class="knob" data-key="lfFreq" data-label="FREQ"></div>
+			<button class="toggle" data-key="lfBell">BELL</button>
+		</div>
+		<div class="section" data-band="lmf">
+			<h2>LMF</h2>
+			<div class="knob big" data-key="lmfGain" data-label="GAIN"></div>
+			<div class="knob" data-key="lmfFreq" data-label="FREQ"></div>
+			<div class="knob" data-key="lmfQ" data-label="Q"></div>
+		</div>
+		<div class="section" data-band="hmf">
+			<h2>HMF</h2>
+			<div class="knob big" data-key="hmfGain" data-label="GAIN"></div>
+			<div class="knob" data-key="hmfFreq" data-label="FREQ"></div>
+			<div class="knob" data-key="hmfQ" data-label="Q"></div>
+		</div>
+		<div class="section" data-band="hf">
+			<h2>HF</h2>
+			<div class="knob big" data-key="hfGain" data-label="GAIN"></div>
+			<div class="knob" data-key="hfFreq" data-label="FREQ"></div>
+			<button class="toggle" data-key="hfBell">BELL</button>
+		</div>
+		<div class="section" data-band="master">
+			<h2>MASTER</h2>
+			<button class="toggle" data-key="eqIn">EQ IN</button>
+			<button class="toggle" data-key="qMode">PROP Q</button>
+			<div class="knob big" data-key="output" data-label="OUTPUT"></div>
+		</div>
+	</div>
+	<div id="hint"></div>
+
+<script src="response.js"></script>
+<script>
+	// ---- parameters (must match entry.cpp) ----
+
+	const PARAMS = {
+		hpfOn: {min: 0, max: 1, def: 0},
+		hpfFreq: {min: 16, max: 350, def: 80, unit: 'Hz', log: true},
+		lpfOn: {min: 0, max: 1, def: 0},
+		lpfFreq: {min: 3000, max: 22000, def: 12000, unit: 'Hz', log: true},
+		hfGain: {min: -15, max: 15, def: 0, unit: 'dB', bipolar: true},
+		hfFreq: {min: 1500, max: 16000, def: 8000, unit: 'Hz', log: true},
+		hfBell: {min: 0, max: 1, def: 0},
+		hmfGain: {min: -15, max: 15, def: 0, unit: 'dB', bipolar: true},
+		hmfFreq: {min: 600, max: 7000, def: 2500, unit: 'Hz', log: true},
+		hmfQ: {min: 0.4, max: 4, def: 1, unit: 'Q', log: true},
+		lmfGain: {min: -15, max: 15, def: 0, unit: 'dB', bipolar: true},
+		lmfFreq: {min: 200, max: 2500, def: 600, unit: 'Hz', log: true},
+		lmfQ: {min: 0.4, max: 4, def: 1, unit: 'Q', log: true},
+		lfGain: {min: -15, max: 15, def: 0, unit: 'dB', bipolar: true},
+		lfFreq: {min: 30, max: 450, def: 100, unit: 'Hz', log: true},
+		lfBell: {min: 0, max: 1, def: 0},
+		eqIn: {min: 0, max: 1, def: 1},
+		qMode: {min: 0, max: 1, def: 0},
+		output: {min: -15, max: 15, def: 0, unit: 'dB', bipolar: true},
+	};
+
+	// Plain-language help, shown while hovering a control
+	const HINTS = {
+		hpfFreq: '<b>High-pass filter</b>: removes rumble and boom below this frequency. Try 80–100 Hz on vocals and guitars.',
+		hpfOn: '<b>HPF on/off</b>: switches the high-pass filter in. Most tracks (except bass and kick) sound cleaner with it.',
+		lpfFreq: '<b>Low-pass filter</b>: removes hiss and harshness above this frequency.',
+		lpfOn: '<b>LPF on/off</b>: switches the low-pass filter in.',
+		lfGain: '<b>LF gain</b> (30–450 Hz): warmth and weight. Boost for fullness, cut to remove boom.',
+		lfFreq: '<b>LF frequency</b>: chooses which low frequencies the LF band works on.',
+		lfBell: '<b>Shelf or bell</b>: a shelf changes everything below the frequency, a bell only the area around it.',
+		lmfGain: '<b>LMF gain</b> (200 Hz–2.5 kHz): body and fullness. Too much sounds muddy or "boxy".',
+		lmfFreq: '<b>LMF frequency</b>: sweep it with a big boost to find a problem, then cut it.',
+		lmfQ: '<b>Q = width</b>: low Q affects a wide area gently, high Q a narrow area precisely.',
+		hmfGain: '<b>HMF gain</b> (600 Hz–7 kHz): presence and clarity. Too much sounds harsh or nasal.',
+		hmfFreq: '<b>HMF frequency</b>: vocals and guitars get their "bite" around 2–5 kHz.',
+		hmfQ: '<b>Q = width</b>: low Q affects a wide area gently, high Q a narrow area precisely.',
+		hfGain: '<b>HF gain</b> (1.5–16 kHz): air, sparkle and brightness. Cut to tame hiss or harshness.',
+		hfFreq: '<b>HF frequency</b>: chooses which high frequencies the HF band works on.',
+		hfBell: '<b>Shelf or bell</b>: a shelf changes everything above the frequency, a bell only the area around it.',
+		eqIn: '<b>EQ in/out</b>: switches the four bands on and off. Compare before and after!',
+		qMode: '<b>Proportional Q</b>: small boosts are broad, big ones get narrower, like many classic consoles.',
+		output: '<b>Output</b>: boosting makes things louder, which tricks our ears. Turn this down to compare fairly.',
+	};
+	const DEFAULT_HINT = 'Drag knobs up or down · Shift = fine · Double-click = reset · Hover over anything for help';
+	const BAND_OF = key => key.match(/^(hpf|lpf|lf|lmf|hmf|hf)/)?.[1].replace(/^(hpf|lpf)$/, 'filters') ?? 'master';
+
+	// ---- talking to the plugin (clap.webview: ArrayBuffer messages, plain text inside) ----
+
+	const standalone = (window.parent === window); // opened directly in a browser: demo mode
+	const encoder = new TextEncoder(), decoder = new TextDecoder();
+	function send(text) {
+		if (standalone) return;
+		window.parent.postMessage(encoder.encode(text).buffer, '*');
+	}
+
+	const state = Object.fromEntries(Object.entries(PARAMS).map(([key, p]) => [key, p.def]));
+	let sampleRate = 48000;
+	let activeKey = null; // parameter currently being changed in this UI
+	let hoveredBand = null;
+
+	window.addEventListener('message', e => {
+		let data = e.data;
+		if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) data = decoder.decode(data);
+		if (typeof data !== 'string') return;
+		const [command, a, b] = data.split(' ');
+		if (command === 'param' && a in state) {
+			if (a === activeKey) return; // the user is moving this one, don't fight them
+			state[a] = parseFloat(b);
+		} else if (command === 'samplerate') {
+			sampleRate = parseFloat(a);
+		}
+		render();
+	});
+
+	function setValue(key, v) {
+		const p = PARAMS[key];
+		v = Math.max(p.min, Math.min(p.max, v));
+		if (v === state[key]) return;
+		state[key] = v;
+		send(`set ${key} ${v}`);
+		render();
+	}
+	function beginGesture(key) {
+		activeKey = key;
+		send(`begin ${key}`);
+	}
+	function endGesture(key) {
+		send(`end ${key}`);
+		setTimeout(() => {if (activeKey === key) activeKey = null;}, 250); // let the host's echo settle
+	}
+	function gesture(key, fn) {
+		beginGesture(key);
+		fn();
+		endGesture(key);
+	}
+
+	// ---- value <-> knob position (0-1) ----
+
+	const toNorm = (key, v) => {
+		const p = PARAMS[key];
+		return p.log ? Math.log(v/p.min)/Math.log(p.max/p.min) : (v - p.min)/(p.max - p.min);
+	};
+	const fromNorm = (key, n) => {
+		const p = PARAMS[key];
+		n = Math.max(0, Math.min(1, n));
+		return p.log ? p.min*Math.pow(p.max/p.min, n) : p.min + n*(p.max - p.min);
+	};
+	// Rounds to a sensible step for display and for the host
+	function tidy(key, v) {
+		const unit = PARAMS[key].unit;
+		if (unit === 'dB') return Math.round(v*10)/10;
+		if (unit === 'Q') return Math.round(v*100)/100;
+		if (unit === 'Hz') {
+			const step = v < 100 ? 1 : v < 1000 ? 5 : v < 10000 ? 50 : 100;
+			return Math.round(v/step)*step;
+		}
+		return v;
+	}
+	function format(key, v) {
+		const unit = PARAMS[key].unit;
+		if (unit === 'dB') return `${v > 0.05 ? '+' : ''}${(Math.abs(v) < 0.05 ? 0 : v).toFixed(1)} dB`;
+		if (unit === 'Q') return v.toFixed(2);
+		if (unit === 'Hz') return v >= 1000 ? `${(v/1000).toFixed(v < 10000 ? 2 : 1)} kHz` : `${Math.round(v)} Hz`;
+		return String(v);
+	}
+
+	// ---- knobs ----
+
+	const START = -135, END = 135; // degrees, 0 = straight up
+	const polar = (deg, r) => [r*Math.sin(deg*Math.PI/180), -r*Math.cos(deg*Math.PI/180)];
+	function arc(from, to, r) {
+		const [x1, y1] = polar(from, r), [x2, y2] = polar(to, r);
+		const large = Math.abs(to - from) > 180 ? 1 : 0, sweep = to > from ? 1 : 0;
+		return `M${x1.toFixed(2)} ${y1.toFixed(2)}A${r} ${r} 0 ${large} ${sweep} ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+	}
+
+	const knobs = [...document.querySelectorAll('.knob')];
+	knobs.forEach(el => {
+		el.innerHTML = `<svg viewBox="-50 -50 100 100"></svg><span class="label">${el.dataset.label}</span><span class="value"></span>`;
+		el.tabIndex = 0;
+		el.setAttribute('role', 'slider');
+		el.setAttribute('aria-label', `${el.closest('.section').querySelector('h2').textContent} ${el.dataset.label}`);
+	});
+	function drawKnob(el) {
+		const key = el.dataset.key, p = PARAMS[key], v = state[key];
+		const angle = START + toNorm(key, v)*(END - START);
+		const from = p.bipolar ? 0 : START;
+		const [px, py] = polar(angle, 28);
+		el.querySelector('svg').innerHTML = `
+			<path class="track" d="${arc(START, END, 44)}"/>
+			${Math.abs(angle - from) > 0.5 ? `<path class="fill" d="${arc(from, angle, 44)}"/>` : ''}
+			<circle class="body" r="34"/>
+			<line class="pointer" x1="${(px*0.3).toFixed(2)}" y1="${(py*0.3).toFixed(2)}" x2="${px.toFixed(2)}" y2="${py.toFixed(2)}"/>`;
+		el.querySelector('.value').textContent = format(key, v);
+		el.setAttribute('aria-valuetext', format(key, v));
+	}
+
+	knobs.forEach(el => {
+		const key = el.dataset.key;
+		let dragY = null, dragNorm = 0;
+		el.addEventListener('pointerdown', e => {
+			if (e.button !== 0) return;
+			el.setPointerCapture(e.pointerId);
+			el.focus();
+			dragY = e.clientY;
+			dragNorm = toNorm(key, state[key]);
+			beginGesture(key);
+		});
+		el.addEventListener('pointermove', e => {
+			if (dragY === null) return;
+			dragNorm += (dragY - e.clientY)/(e.shiftKey ? 1000 : 200);
+			dragNorm = Math.max(0, Math.min(1, dragNorm));
+			dragY = e.clientY;
+			setValue(key, tidy(key, fromNorm(key, dragNorm)));
+		});
+		const endDrag = () => {
+			if (dragY === null) return;
+			dragY = null;
+			endGesture(key);
+		};
+		el.addEventListener('pointerup', endDrag);
+		el.addEventListener('pointercancel', endDrag);
+		el.addEventListener('dblclick', () => gesture(key, () => setValue(key, PARAMS[key].def)));
+		const nudge = (amount) => gesture(key, () => {
+			const n = toNorm(key, state[key]) + amount;
+			let v = tidy(key, fromNorm(key, n));
+			if (v === state[key]) v = tidy(key, fromNorm(key, n + amount)); // step past rounding
+			setValue(key, v);
+		});
+		el.addEventListener('wheel', e => {
+			e.preventDefault();
+			nudge(-Math.sign(e.deltaY)*(e.shiftKey ? 0.004 : 0.02));
+		}, {passive: false});
+		el.addEventListener('keydown', e => {
+			const steps = {ArrowUp: 0.02, ArrowRight: 0.02, ArrowDown: -0.02, ArrowLeft: -0.02, PageUp: 0.1, PageDown: -0.1};
+			if (e.key in steps) {
+				e.preventDefault();
+				nudge(steps[e.key]*(e.shiftKey ? 0.2 : 1));
+			} else if (e.key === 'Home' || e.key === 'Delete') {
+				e.preventDefault();
+				gesture(key, () => setValue(key, PARAMS[key].def));
+			}
+		});
+	});
+
+	// ---- toggle buttons ----
+
+	const toggles = [...document.querySelectorAll('.toggle')];
+	toggles.forEach(el => {
+		const key = el.dataset.key;
+		el.addEventListener('click', () => gesture(key, () => setValue(key, state[key] >= 0.5 ? 0 : 1)));
+	});
+	function drawToggle(el) {
+		el.setAttribute('aria-pressed', state[el.dataset.key] >= 0.5 ? 'true' : 'false');
+	}
+
+	// ---- hover help ----
+
+	const hint = document.getElementById('hint');
+	document.querySelectorAll('[data-key]').forEach(el => {
+		el.addEventListener('pointerenter', () => {
+			hint.innerHTML = HINTS[el.dataset.key] ?? DEFAULT_HINT;
+			hoveredBand = BAND_OF(el.dataset.key);
+			render();
+		});
+		el.addEventListener('pointerleave', () => {
+			hint.textContent = DEFAULT_HINT;
+			hoveredBand = null;
+			render();
+		});
+	});
+	hint.textContent = DEFAULT_HINT;
+
+	// ---- response curve ----
+
+	const canvas = document.getElementById('curve');
+	const ctx = canvas.getContext('2d');
+	const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+	const F_MIN = 20, F_MAX = 20000, DB_RANGE = 18;
+	const BAND_FREQ = {lf: 'lfFreq', lmf: 'lmfFreq', hmf: 'hmfFreq', hf: 'hfFreq'};
+
+	function drawCurve() {
+		const w = canvas.width, h = canvas.height, s = w/612;
+		const xOf = f => Math.log(f/F_MIN)/Math.log(F_MAX/F_MIN)*w;
+		const yOf = db => h/2 - db/DB_RANGE*(h/2 - 8*s);
+		const fOf = x => F_MIN*Math.pow(F_MAX/F_MIN, x/w);
+		ctx.clearRect(0, 0, w, h);
+
+		// grid
+		ctx.lineWidth = s;
+		ctx.font = `${10*s}px system-ui, sans-serif`;
+		ctx.fillStyle = css('--muted');
+		for (const f of [30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]) {
+			ctx.strokeStyle = [100, 1000, 10000].includes(f) ? css('--grid-strong') : css('--grid');
+			ctx.globalAlpha = [100, 1000, 10000].includes(f) ? 1 : 0.6;
+			ctx.beginPath();
+			ctx.moveTo(xOf(f), 0);
+			ctx.lineTo(xOf(f), h);
+			ctx.stroke();
+		}
+		ctx.globalAlpha = 1;
+		for (const [f, label] of [[50, '50'], [100, '100'], [200, '200'], [500, '500'], [1000, '1k'], [2000, '2k'], [5000, '5k'], [10000, '10k']]) {
+			ctx.fillText(label, xOf(f) + 3*s, h - 4*s);
+		}
+		for (const db of [-12, -6, 6, 12]) {
+			ctx.strokeStyle = css('--grid');
+			ctx.beginPath();
+			ctx.moveTo(0, yOf(db));
+			ctx.lineTo(w, yOf(db));
+			ctx.stroke();
+			if (Math.abs(db) === 12) ctx.fillText((db > 0 ? '+' : '') + db, 4*s, yOf(db) - 3*s);
+		}
+		ctx.strokeStyle = css('--grid-strong');
+		ctx.beginPath();
+		ctx.moveTo(0, yOf(0));
+		ctx.lineTo(w, yOf(0));
+		ctx.stroke();
+
+		// each section on its own, then the total
+		const xs = [];
+		for (let x = 0; x <= w; x += 2) xs.push(x);
+		const sections = xs.map(x => EqResponse.sectionsDb(state, sampleRate, fOf(x)));
+		const total = xs.map(x => EqResponse.responseDb(state, sampleRate, fOf(x)));
+		const clampDb = db => Math.max(-DB_RANGE - 2, Math.min(DB_RANGE + 2, db));
+		const eqOn = state.eqIn >= 0.5;
+
+		for (const band of ['filters', 'lf', 'lmf', 'hmf', 'hf']) {
+			const active = band === 'filters' ? (state.hpfOn >= 0.5 || state.lpfOn >= 0.5) : eqOn;
+			if (!active) continue;
+			const highlight = hoveredBand === band;
+			ctx.beginPath();
+			ctx.moveTo(0, yOf(0));
+			xs.forEach((x, i) => ctx.lineTo(x, yOf(clampDb(sections[i][band]))));
+			ctx.lineTo(w, yOf(0));
+			ctx.closePath();
+			ctx.fillStyle = css('--' + band);
+			ctx.globalAlpha = highlight ? 0.35 : 0.12;
+			ctx.fill();
+			ctx.globalAlpha = highlight ? 1 : 0.5;
+			ctx.strokeStyle = css('--' + band);
+			ctx.lineWidth = (highlight ? 2 : 1.25)*s;
+			ctx.beginPath();
+			xs.forEach((x, i) => {
+				const y = yOf(clampDb(sections[i][band]));
+				i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+			});
+			ctx.stroke();
+		}
+		ctx.globalAlpha = 1;
+		ctx.strokeStyle = css('--text');
+		ctx.lineWidth = 2.5*s;
+		ctx.lineJoin = 'round';
+		ctx.beginPath();
+		xs.forEach((x, i) => {
+			const y = yOf(clampDb(total[i]));
+			i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+		});
+		ctx.stroke();
+
+		// a dot for each band at its frequency
+		if (eqOn) {
+			for (const [band, freqKey] of Object.entries(BAND_FREQ)) {
+				const f = state[freqKey];
+				const x = xOf(f), y = yOf(clampDb(EqResponse.sectionsDb(state, sampleRate, f)[band]));
+				ctx.beginPath();
+				ctx.arc(x, y, (hoveredBand === band ? 6 : 4.5)*s, 0, 2*Math.PI);
+				ctx.fillStyle = css('--' + band);
+				ctx.fill();
+				ctx.lineWidth = 1.5*s;
+				ctx.strokeStyle = css('--panel');
+				ctx.stroke();
+			}
+		}
+	}
+
+	// ---- rendering ----
+
+	let frame = 0;
+	function render() {
+		if (frame) return;
+		frame = requestAnimationFrame(() => {
+			frame = 0;
+			knobs.forEach(drawKnob);
+			toggles.forEach(drawToggle);
+			const eqOn = state.eqIn >= 0.5;
+			document.querySelectorAll('.section').forEach(section => {
+				const band = section.dataset.band;
+				section.classList.toggle('bypassed', ['lf', 'lmf', 'hmf', 'hf'].includes(band) && !eqOn);
+			});
+			drawCurve();
+		});
+	}
+	render();
+	send('ready');
+	// ask for changes made elsewhere (automation, the host's own controls) while we're visible
+	setInterval(() => {
+		if (document.visibilityState === 'visible') send('poll');
+	}, 33);
+</script>
+</body>
+</html>

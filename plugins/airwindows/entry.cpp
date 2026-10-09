@@ -1,10 +1,9 @@
 // Bundle "webclap-eq-airwindows": Airwindows plugins ported to WebCLAP
 
+#include "webclap/entry.h"
 #include "webclap/plugin.h"
 
 #include "./baxandall2.h"
-
-#include <cstring>
 
 namespace {
 
@@ -53,49 +52,6 @@ struct Baxandall2Plugin : public webclap::Plugin {
 	}
 };
 
-// ---- plugin factory ----
-
-uint32_t factoryGetPluginCount(const clap_plugin_factory *) {
-	return 1;
-}
-const clap_plugin_descriptor * factoryGetPluginDescriptor(const clap_plugin_factory *, uint32_t index) {
-	if (index == 0) return Baxandall2Plugin::descriptor();
-	return nullptr;
-}
-const clap_plugin * factoryCreatePlugin(const clap_plugin_factory *, const clap_host *host, const char *pluginId) {
-	if (!clap_version_is_compatible(host->clap_version)) return nullptr;
-	if (!std::strcmp(pluginId, Baxandall2Plugin::descriptor()->id)) {
-		return (new Baxandall2Plugin(host))->clap();
-	}
-	return nullptr;
-}
-
-// ---- module entry ----
-
-bool entryInit(const char *path) {
-	return true;
-}
-void entryDeinit() {}
-const void * entryGetFactory(const char *factoryId) {
-	if (!std::strcmp(factoryId, CLAP_PLUGIN_FACTORY_ID)) {
-		static const clap_plugin_factory factory{
-			.get_plugin_count=factoryGetPluginCount,
-			.get_plugin_descriptor=factoryGetPluginDescriptor,
-			.create_plugin=factoryCreatePlugin
-		};
-		return &factory;
-	}
-	return nullptr;
-}
-
 } // namespace
 
-extern "C" {
-	// All three functions must be present: some hosts (e.g. openDAW) call deinit() after scanning
-	CLAP_EXPORT const clap_plugin_entry clap_entry{
-		.clap_version=CLAP_VERSION_INIT,
-		.init=entryInit,
-		.deinit=entryDeinit,
-		.get_factory=entryGetFactory
-	};
-}
+WEBCLAP_BUNDLE(Baxandall2Plugin)

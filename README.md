@@ -9,12 +9,12 @@ The plugins are [WebCLAP](https://github.com/WebCLAP) (WCLAP) modules: [CLAP](ht
 | Bundle | Plugin | Status |
 |---|---|---|
 | `webclap-eq-airwindows` | **Baxandall2 (Airwindows)**: bass and treble tone controls, ported from [Airwindows](https://www.airwindows.com/baxandall2/) | milestone 0 |
-| | **Console EQ**: British-console-style channel EQ | planned |
+| `webclap-eq-console` | **Console EQ**: British-console-style channel EQ: HPF/LPF, LF and HF (shelf/bell), LMF and HMF with Q, proportional-Q mode | first version |
 | | **Studio EQ**: graphical EQ with draggable bands | planned |
 
 ## Using a plugin
 
-1. Download `webclap-eq-airwindows.wclap.tar.gz`. Until releases exist, build it as described below; the file appears in `dist/`.
+1. Download a bundle, e.g. `webclap-eq-console.wclap.tar.gz`. Until releases exist, build it as described below; the files appear in `dist/`.
 2. Load the `.wclap.tar.gz` file into your DAW (openDAW, or a test host such as [wclap.plinken.org](https://wclap.plinken.org/)) as an audio effect.
 
 ## Building
@@ -33,7 +33,7 @@ This produces `dist/<bundle>.wclap.tar.gz`.
 `tests/smoke-test.mjs` is a small headless host in Node.js (v20+). It loads a bundle and checks:
 - the CLAP entry and factory
 - parameters
-- audio processing, including the measured frequency response
+- audio processing: the measured frequency response must match the plugin's `ui/response.js` (the formula its UI draws the curve with) in a series of random settings
 - state save and load
 - the web UI messages
 
@@ -41,7 +41,7 @@ This produces `dist/<bundle>.wclap.tar.gz`.
 node tests/smoke-test.mjs dist/webclap-eq-airwindows.wclap.tar.gz
 ```
 
-A plugin UI can also be opened directly in a browser (e.g. `plugins/airwindows/ui/index.html`). It then runs in demo mode, without audio.
+A plugin UI can also be opened in a browser, where it runs in demo mode without audio. Serve the folder so `response.js` loads, e.g. `python -m http.server --directory plugins` and open `http://localhost:8000/console/ui/`.
 
 ## Project layout
 
@@ -49,6 +49,7 @@ A plugin UI can also be opened directly in a browser (e.g. `plugins/airwindows/u
 cmake/             build helpers (WASI toolchain, bundle packing, UI embedding)
 shared/webclap/    common plugin code: parameters, state, webview UI messages
 plugins/airwindows Airwindows ports (DSP + ui/)
+plugins/console    Console EQ (DSP + ui/)
 tests/             headless smoke-test host
 ```
 
