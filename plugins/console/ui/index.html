@@ -178,7 +178,7 @@
 	#hint {
 		height: 32px;
 		margin: 0 14px;
-		padding-top: 7px;
+		padding-top: 4px;
 		font-size: 11.5px;
 		line-height: 1.3;
 		color: var(--muted);
@@ -264,27 +264,27 @@
 		output: {min: -15, max: 15, def: 0, unit: 'dB', bipolar: true},
 	};
 
-	// Plain-language help, shown while hovering a control
+	// What each control does, shown while hovering it
 	const HINTS = {
-		hpfFreq: '<b>High-pass filter</b>: removes rumble and boom below this frequency. Try 80–100 Hz on vocals and guitars.',
-		hpfOn: '<b>HPF on/off</b>: switches the high-pass filter in. Most tracks (except bass and kick) sound cleaner with it.',
-		lpfFreq: '<b>Low-pass filter</b>: removes hiss and harshness above this frequency.',
-		lpfOn: '<b>LPF on/off</b>: switches the low-pass filter in.',
-		lfGain: '<b>LF gain</b> (30–450 Hz): warmth and weight. Boost for fullness, cut to remove boom.',
-		lfFreq: '<b>LF frequency</b>: chooses which low frequencies the LF band works on.',
-		lfBell: '<b>Shelf or bell</b>: a shelf changes everything below the frequency, a bell only the area around it.',
-		lmfGain: '<b>LMF gain</b> (200 Hz–2.5 kHz): body and fullness. Too much sounds muddy or "boxy".',
-		lmfFreq: '<b>LMF frequency</b>: sweep it with a big boost to find a problem, then cut it.',
-		lmfQ: '<b>Q = width</b>: low Q affects a wide area gently, high Q a narrow area precisely.',
-		hmfGain: '<b>HMF gain</b> (600 Hz–7 kHz): presence and clarity. Too much sounds harsh or nasal.',
-		hmfFreq: '<b>HMF frequency</b>: vocals and guitars get their "bite" around 2–5 kHz.',
-		hmfQ: '<b>Q = width</b>: low Q affects a wide area gently, high Q a narrow area precisely.',
-		hfGain: '<b>HF gain</b> (1.5–16 kHz): air, sparkle and brightness. Cut to tame hiss or harshness.',
-		hfFreq: '<b>HF frequency</b>: chooses which high frequencies the HF band works on.',
-		hfBell: '<b>Shelf or bell</b>: a shelf changes everything above the frequency, a bell only the area around it.',
-		eqIn: '<b>EQ in/out</b>: switches the four bands on and off. Compare before and after!',
-		qMode: '<b>Proportional Q</b>: small boosts are broad, big ones get narrower, like many classic consoles.',
-		output: '<b>Output</b>: boosting makes things louder, which tricks our ears. Turn this down to compare fairly.',
+		hpfFreq: '<b>HPF frequency</b>: where the high-pass filter starts. Frequencies below it are turned down.',
+		hpfOn: '<b>HPF</b>: switches the high-pass filter on or off.',
+		lpfFreq: '<b>LPF frequency</b>: where the low-pass filter starts. Frequencies above it are turned down.',
+		lpfOn: '<b>LPF</b>: switches the low-pass filter on or off.',
+		lfGain: '<b>LF gain</b>: turns the low frequencies up or down.',
+		lfFreq: '<b>LF frequency</b>: which low frequencies the LF band affects (30–450 Hz).',
+		lfBell: '<b>Bell</b>: off = shelf (changes everything below the frequency), on = bell (changes only the area around it).',
+		lmfGain: '<b>LMF gain</b>: turns the low-mid frequencies up or down.',
+		lmfFreq: '<b>LMF frequency</b>: the centre of the LMF band (200 Hz–2.5 kHz).',
+		lmfQ: '<b>LMF Q</b>: the width of the LMF band. Low Q = wide, high Q = narrow.',
+		hmfGain: '<b>HMF gain</b>: turns the high-mid frequencies up or down.',
+		hmfFreq: '<b>HMF frequency</b>: the centre of the HMF band (600 Hz–7 kHz).',
+		hmfQ: '<b>HMF Q</b>: the width of the HMF band. Low Q = wide, high Q = narrow.',
+		hfGain: '<b>HF gain</b>: turns the high frequencies up or down.',
+		hfFreq: '<b>HF frequency</b>: which high frequencies the HF band affects (1.5–16 kHz).',
+		hfBell: '<b>Bell</b>: off = shelf (changes everything above the frequency), on = bell (changes only the area around it).',
+		eqIn: '<b>EQ IN</b>: switches the four bands (LF, LMF, HMF, HF) on or off. The filters are not affected.',
+		qMode: '<b>PROP Q</b>: when on, the bells get narrower the more they are turned up or down.',
+		output: '<b>Output</b>: the volume of the sound leaving the EQ.',
 	};
 	const DEFAULT_HINT = 'Drag knobs up or down · Shift = fine · Double-click = reset · Hover over anything for help';
 	const BAND_OF = key => key.match(/^(hpf|lpf|lf|lmf|hmf|hf)/)?.[1].replace(/^(hpf|lpf)$/, 'filters') ?? 'master';
@@ -356,7 +356,7 @@
 		if (unit === 'dB') return Math.round(v*10)/10;
 		if (unit === 'Q') return Math.round(v*100)/100;
 		if (unit === 'Hz') {
-			const step = v < 100 ? 1 : v < 1000 ? 5 : v < 10000 ? 50 : 100;
+			const step = v < 1000 ? 1 : v < 10000 ? 10 : 100; // matches what's displayed
 			return Math.round(v/step)*step;
 		}
 		return v;
@@ -413,7 +413,7 @@
 		});
 		el.addEventListener('pointermove', e => {
 			if (dragY === null) return;
-			dragNorm += (dragY - e.clientY)/(e.shiftKey ? 1000 : 200);
+			dragNorm += (dragY - e.clientY)/(e.shiftKey ? 4000 : 200);
 			dragNorm = Math.max(0, Math.min(1, dragNorm));
 			dragY = e.clientY;
 			setValue(key, tidy(key, fromNorm(key, dragNorm)));
@@ -434,13 +434,13 @@
 		});
 		el.addEventListener('wheel', e => {
 			e.preventDefault();
-			nudge(-Math.sign(e.deltaY)*(e.shiftKey ? 0.004 : 0.02));
+			nudge(-Math.sign(e.deltaY)*(e.shiftKey ? 0.001 : 0.02));
 		}, {passive: false});
 		el.addEventListener('keydown', e => {
 			const steps = {ArrowUp: 0.02, ArrowRight: 0.02, ArrowDown: -0.02, ArrowLeft: -0.02, PageUp: 0.1, PageDown: -0.1};
 			if (e.key in steps) {
 				e.preventDefault();
-				nudge(steps[e.key]*(e.shiftKey ? 0.2 : 1));
+				nudge(steps[e.key]*(e.shiftKey ? 0.05 : 1));
 			} else if (e.key === 'Home' || e.key === 'Delete') {
 				e.preventDefault();
 				gesture(key, () => setValue(key, PARAMS[key].def));

@@ -299,7 +299,7 @@
 		});
 		el.addEventListener('pointermove', e => {
 			if (dragY === null) return;
-			const perPixel = e.shiftKey ? 0.04 : 0.25; // dB per pixel
+			const perPixel = e.shiftKey ? 0.01 : 0.25; // dB per pixel
 			dragValue += (dragY - e.clientY)*perPixel;
 			dragY = e.clientY;
 			setValue(key, Math.round(dragValue*10)/10);
