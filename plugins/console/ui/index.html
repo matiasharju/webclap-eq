@@ -264,29 +264,11 @@
 		output: {min: -15, max: 15, def: 0, unit: 'dB', bipolar: true},
 	};
 
-	// What each control does, shown while hovering it
+	// Help shown while hovering a control (only for the less familiar ones)
 	const HINTS = {
-		hpfFreq: '<b>HPF frequency</b>: where the high-pass filter starts. Frequencies below it are turned down.',
-		hpfOn: '<b>HPF</b>: switches the high-pass filter on or off.',
-		lpfFreq: '<b>LPF frequency</b>: where the low-pass filter starts. Frequencies above it are turned down.',
-		lpfOn: '<b>LPF</b>: switches the low-pass filter on or off.',
-		lfGain: '<b>LF gain</b>: turns the low frequencies up or down.',
-		lfFreq: '<b>LF frequency</b>: which low frequencies the LF band affects (30–450 Hz).',
-		lfBell: '<b>Bell</b>: off = shelf (changes everything below the frequency), on = bell (changes only the area around it).',
-		lmfGain: '<b>LMF gain</b>: turns the low-mid frequencies up or down.',
-		lmfFreq: '<b>LMF frequency</b>: the centre of the LMF band (200 Hz–2.5 kHz).',
-		lmfQ: '<b>LMF Q</b>: the width of the LMF band. Low Q = wide, high Q = narrow.',
-		hmfGain: '<b>HMF gain</b>: turns the high-mid frequencies up or down.',
-		hmfFreq: '<b>HMF frequency</b>: the centre of the HMF band (600 Hz–7 kHz).',
-		hmfQ: '<b>HMF Q</b>: the width of the HMF band. Low Q = wide, high Q = narrow.',
-		hfGain: '<b>HF gain</b>: turns the high frequencies up or down.',
-		hfFreq: '<b>HF frequency</b>: which high frequencies the HF band affects (1.5–16 kHz).',
-		hfBell: '<b>Bell</b>: off = shelf (changes everything above the frequency), on = bell (changes only the area around it).',
-		eqIn: '<b>EQ IN</b>: switches the four bands (LF, LMF, HMF, HF) on or off. The filters are not affected.',
 		qMode: '<b>PROP Q</b>: when on, the bells get narrower the more they are turned up or down.',
-		output: '<b>Output</b>: the volume of the sound leaving the EQ.',
 	};
-	const DEFAULT_HINT = 'Drag knobs up or down · Shift = fine · Double-click = reset · Hover over anything for help';
+	const DEFAULT_HINT = 'Drag knobs up or down · Shift = fine · Double-click = reset';
 	const BAND_OF = key => key.match(/^(hpf|lpf|lf|lmf|hmf|hf)/)?.[1].replace(/^(hpf|lpf)$/, 'filters') ?? 'master';
 
 	// ---- talking to the plugin (clap.webview: ArrayBuffer messages, plain text inside) ----
