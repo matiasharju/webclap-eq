@@ -52,14 +52,15 @@ jobs:
           done
 
       - name: Assemble site
+        env:
+          SITE_PLUGINS: console # plugins/<name> shown on the site (bundle: dist/webclap-eq-<name>.wclap.tar.gz)
         run: |
           mkdir -p site/download site/demo
-          cp web/* site/
-          cp dist/*.wclap.tar.gz site/download/
-          for ui in plugins/*/ui; do
-            plugin=$(basename "$(dirname "$ui")")
+          cp -r web/* site/
+          for plugin in $SITE_PLUGINS; do
+            cp "dist/webclap-eq-$plugin.wclap.tar.gz" site/download/
             mkdir -p "site/demo/$plugin"
-            cp -r "$ui"/* "site/demo/$plugin/"
+            cp -r "plugins/$plugin/ui"/* "site/demo/$plugin/"
           done
           ls -R site
 
