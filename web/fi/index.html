@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebCLAP Plugins</title>
+<meta name="description" content="Ilmaisia plugareita, jotka toimivat selaimessa, esimerkiksi openDAW:ssa.">
+<link rel="alternate" hreflang="en" href="../">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main>
+	<a class="lang" href="../" hreflang="en" lang="en">In English</a>
+	<h1>WebCLAP Plugins</h1>
+	<p class="lead">Ilmaisia plugareita, jotka toimivat selaimessa, esimerkiksi <a href="https://opendaw.studio">openDAW</a>:ssa.</p>
+
+	<h2>Plugin-efektit</h2>
+
+	<section class="plugin" style="--stripe: #4f9cf5">
+		<h3>Console EQ</h3>
+		<p>Kanavakohtainen taajuuskorjain brittiläisten miksaustiskien tyyliin ("British EQ"): yli- ja alipäästösuotimet (HPF ja LPF), matalien ja korkeiden taajuuksien kaistat, joissa voi valita hylly- ja kellokorjaimet, sekä kaksi keskitaajuuskaistaa, joiden leveyttä (Q) voi säätää.</p>
+		<img class="screenshot" src="../console-eq.png" width="640" height="420" alt="Console EQ -ikkuna: taajuuskäyrä ja sen alla kuusi säädinosiota: Filters, LF, LMF, HMF, HF ja Master.">
+		<div class="actions">
+			<a class="button primary" href="../download/console-eq.wclap.tar.gz" download>Lataa</a>
+			<a class="button" href="../demo/console-eq/index.html">Kokeile säätimiä</a>
+		</div>
+	</section>
+
+	<p>"Kokeile säätimiä" avaa plugin-ikkunan (UI) selaimeesi ilman ääntä, joten näet, miten nupit ja taajuuskäyrä toimivat.</p>
+
+	<h2>Näin käytät plugaria openDAW:ssa</h2>
+	<ol>
+		<li>Lataa tiedosto koneellesi (menee yleensä Lataukset-kansioon). Jätä se sellaisenaan <code>.wclap.tar.gz</code>-tiedostoksi, sitä ei tarvitse purkaa.</li>
+		<li>Avaa openDAW ja lisää audioraidalle (Tape) WebCLAP-efekti.</li>
+		<li>Valitse efektistä <b>Load Plugin</b> → <b>Import WebCLAP</b> ja valitse lataamasi <code>.wclap.tar.gz</code>-tiedosto.</li>
+		<li>Paina <b>Open UI</b> avataksesi plugari-ikkunan tai valitse <b>Parameters</b> luodaksesi automaatioita ym.</li>
+	</ol>
+
+	<h2>Jos plugin-ikkuna (UI) on estetty</h2>
+	<p>openDAW näyttää plugin-ikkunat erillisestä osoitteesta. Jos ikkunassa näkyy plugarin sijaan ilmoitus estetystä sivusta, selaimesi tai verkkosi estää tämän osoitteen. Selaimella pitää olla pääsy molempiin näistä sivustoista (koulun tai työpaikan tietokoneella pyydä laitteen ylläpitäjää sallimaan ne):</p>
+	<ul>
+		<li><code>opendaw.studio</code></li>
+		<li><code>opendaw-plugins.studio</code></li>
+	</ul>
+
+	<footer>
+		Avoin lähdekoodi (MIT-lisenssi), <a href="https://github.com/matiasharju/webclap-plugins">GitHubissa</a>.
+		WebCLAP on <a href="https://cleveraudio.org">CLAP</a>-pluginstandardiin perustuva <a href="https://github.com/WebCLAP">yhteisöprojekti</a>.
+	</footer>
+</main>
+</body>
+</html>

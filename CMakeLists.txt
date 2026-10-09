@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(webclap-eq VERSION 0.1.0 LANGUAGES CXX)
+project(webclap-plugins VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -29,7 +29,7 @@ target_link_libraries(webclap-shared INTERFACE clap)
 # ---- Milestone 0: Airwindows port ----
 
 add_wclap_bundle(
-	NAME webclap-eq-airwindows
+	NAME airwindows
 	SOURCES
 		${CMAKE_CURRENT_LIST_DIR}/plugins/airwindows/entry.cpp
 	RESOURCES_DIR ${CMAKE_CURRENT_LIST_DIR}/plugins/airwindows/ui
@@ -39,9 +39,9 @@ add_wclap_bundle(
 # ---- Console EQ ----
 
 add_wclap_bundle(
-	NAME webclap-eq-console
+	NAME console-eq
 	SOURCES
-		${CMAKE_CURRENT_LIST_DIR}/plugins/console/entry.cpp
-	RESOURCES_DIR ${CMAKE_CURRENT_LIST_DIR}/plugins/console/ui
+		${CMAKE_CURRENT_LIST_DIR}/plugins/console-eq/entry.cpp
+	RESOURCES_DIR ${CMAKE_CURRENT_LIST_DIR}/plugins/console-eq/ui
 	EXTRA_FILES ${CMAKE_CURRENT_LIST_DIR}/LICENSE.txt
 )

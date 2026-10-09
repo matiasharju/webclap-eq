@@ -1,4 +1,4 @@
-// Bundle "webclap-eq-console": British-console-style channel EQ
+// Bundle "console-eq": British-console-style channel EQ
 
 #include "webclap/entry.h"
 #include "webclap/plugin.h"
@@ -23,12 +23,12 @@ struct ConsoleEqPlugin : public webclap::Plugin {
 		};
 		static const clap_plugin_descriptor descriptor{
 			.clap_version=CLAP_VERSION_INIT,
-			.id="io.github.matiasharju.webclap-eq.console-eq",
+			.id="io.github.matiasharju.webclap-plugins.console-eq",
 			.name="Console EQ",
-			.vendor="WebCLAP EQ",
-			.url="https://github.com/matiasharju/webclap-eq",
-			.manual_url="https://github.com/matiasharju/webclap-eq",
-			.support_url="https://github.com/matiasharju/webclap-eq/issues",
+			.vendor="WebCLAP Plugins",
+			.url="https://github.com/matiasharju/webclap-plugins",
+			.manual_url="https://github.com/matiasharju/webclap-plugins",
+			.support_url="https://github.com/matiasharju/webclap-plugins/issues",
 			.version="0.1.0",
 			.description="British-console-style channel EQ: filters plus four bands",
 			.features=features

@@ -281,6 +281,12 @@
 	}
 
 	const state = Object.fromEntries(Object.entries(PARAMS).map(([key, p]) => [key, p.def]));
+	if (standalone) {
+		// demo mode: settings can be given in the address, e.g. index.html#lfGain=4&hpfOn=1
+		for (const [key, value] of new URLSearchParams(location.hash.slice(1))) {
+			if (key in state && Number.isFinite(parseFloat(value))) state[key] = parseFloat(value);
+		}
+	}
 	let sampleRate = 48000;
 	let activeKey = null; // parameter currently being changed in this UI
 	let hoveredBand = null;

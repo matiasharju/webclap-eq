@@ -53,14 +53,18 @@ jobs:
 
       - name: Assemble site
         env:
-          SITE_PLUGINS: console # plugins/<name> shown on the site (bundle: dist/webclap-eq-<name>.wclap.tar.gz)
+          SITE_PLUGINS: console-eq # plugins/<name> shown on the site (bundle: dist/<name>.wclap.tar.gz)
         run: |
           mkdir -p site/download site/demo
           cp -r web/* site/
           for plugin in $SITE_PLUGINS; do
-            cp "dist/webclap-eq-$plugin.wclap.tar.gz" site/download/
+            cp "dist/$plugin.wclap.tar.gz" site/download/
             mkdir -p "site/demo/$plugin"
             cp -r "plugins/$plugin/ui"/* "site/demo/$plugin/"
+            # Screenshot of the UI (in demo mode, with the settings from plugins/<name>/screenshot-settings)
+            if [ -f "plugins/$plugin/screenshot-settings" ]; then
+              google-chrome --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 --window-size=640,420                 --screenshot="$PWD/site/$plugin.png" "file://$PWD/plugins/$plugin/ui/index.html#$(cat "plugins/$plugin/screenshot-settings")"
+            fi
           done
           ls -R site
 

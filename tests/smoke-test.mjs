@@ -1,6 +1,6 @@
 // Minimal headless WCLAP host for automated checks (no audio output).
 //
-//     node tests/smoke-test.mjs dist/webclap-eq-airwindows.wclap.tar.gz
+//     node tests/smoke-test.mjs dist/airwindows.wclap.tar.gz
 //
 // Loads a bundle like a DAW would, then exercises: entry/factory, parameters, audio processing
 // (measures the frequency response), state save/load, and the webview UI messages.
@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 
-const bundlePath = process.argv[2] ?? 'dist/webclap-eq-airwindows.wclap.tar.gz';
+const bundlePath = process.argv[2] ?? 'dist/airwindows.wclap.tar.gz';
 let failures = 0;
 function check(condition, message) {
 	console.log(`  ${condition ? 'ok  ' : 'FAIL'} ${message}`);
@@ -195,7 +195,7 @@ const hostExtensions = {
 };
 const host = malloc(48);
 setU32(host, 1); setU32(host + 4, 2); setU32(host + 8, 7);
-[allocString('smoke-test'), allocString('webclap-eq'), allocString(''), allocString('0.1')].forEach((p, i) => setU32(host + 16 + i*4, p));
+[allocString('smoke-test'), allocString('webclap-plugins'), allocString(''), allocString('0.1')].forEach((p, i) => setU32(host + 16 + i*4, p));
 [hostFns.getExtension, hostFns.requestRestart, hostFns.requestProcess, hostFns.requestCallback].forEach((p, i) => setU32(host + 32 + i*4, p));
 
 const inEventsStruct = makeStruct([0, hostFns.inSize, hostFns.inGet]);

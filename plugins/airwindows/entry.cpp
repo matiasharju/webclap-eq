@@ -1,4 +1,4 @@
-// Bundle "webclap-eq-airwindows": Airwindows plugins ported to WebCLAP
+// Bundle "airwindows": Airwindows plugins ported to WebCLAP
 
 #include "webclap/entry.h"
 #include "webclap/plugin.h"
@@ -17,12 +17,12 @@ struct Baxandall2Plugin : public webclap::Plugin {
 		};
 		static const clap_plugin_descriptor descriptor{
 			.clap_version=CLAP_VERSION_INIT,
-			.id="io.github.matiasharju.webclap-eq.airwindows-baxandall2",
+			.id="io.github.matiasharju.webclap-plugins.airwindows-baxandall2",
 			.name="Baxandall2 port",
-			.vendor="WebCLAP EQ",
-			.url="https://github.com/matiasharju/webclap-eq",
+			.vendor="WebCLAP Plugins",
+			.url="https://github.com/matiasharju/webclap-plugins",
 			.manual_url="https://www.airwindows.com/baxandall2/",
-			.support_url="https://github.com/matiasharju/webclap-eq/issues",
+			.support_url="https://github.com/matiasharju/webclap-plugins/issues",
 			.version="0.1.0",
 			.description="Treble and bass tone controls, ported from Airwindows Baxandall2 (MIT)",
 			.features=features
