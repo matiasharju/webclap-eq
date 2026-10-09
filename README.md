@@ -8,7 +8,7 @@ The plugins are [WebCLAP](https://github.com/WebCLAP) (WCLAP) modules: [CLAP](ht
 
 | Bundle | Plugin | Status |
 |---|---|---|
-| `webclap-eq-airwindows` | **Baxandall2 (Airwindows)**: bass and treble tone controls, ported from [Airwindows](https://www.airwindows.com/baxandall2/) | milestone 0 |
+| `webclap-eq-airwindows` | **Baxandall2 port**: bass and treble tone controls, ported from [Airwindows Baxandall2](https://www.airwindows.com/baxandall2/) | milestone 0 |
 | `webclap-eq-console` | **Console EQ**: British-console-style channel EQ: HPF/LPF, LF and HF (shelf/bell), LMF and HMF with Q, proportional-Q mode | first version |
 | | **Studio EQ**: graphical EQ with draggable bands | planned |
 

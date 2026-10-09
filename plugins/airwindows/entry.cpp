@@ -18,7 +18,7 @@ struct Baxandall2Plugin : public webclap::Plugin {
 		static const clap_plugin_descriptor descriptor{
 			.clap_version=CLAP_VERSION_INIT,
 			.id="io.github.matiasharju.webclap-eq.airwindows-baxandall2",
-			.name="Baxandall2 (Airwindows)",
+			.name="Baxandall2 port",
 			.vendor="WebCLAP EQ",
 			.url="https://github.com/matiasharju/webclap-eq",
 			.manual_url="https://www.airwindows.com/baxandall2/",
