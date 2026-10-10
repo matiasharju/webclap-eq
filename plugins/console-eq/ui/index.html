@@ -53,6 +53,11 @@
 		font-size: 11px;
 		color: var(--muted);
 	}
+	#build {
+		margin-left: auto;
+		font-size: 10px;
+		opacity: 0.7;
+	}
 	#curve {
 		display: block;
 		margin: 0 14px;
@@ -194,6 +199,7 @@
 	<header>
 		<h1>Console EQ</h1>
 		<span class="subtitle">British-style channel EQ</span>
+		<span class="subtitle" id="build"></span>
 	</header>
 	<canvas id="curve" width="1224" height="240"></canvas>
 
@@ -301,6 +307,8 @@
 			state[a] = parseFloat(b);
 		} else if (command === 'samplerate') {
 			sampleRate = parseFloat(a);
+		} else if (command === 'build') {
+			document.getElementById('build').textContent = `build ${a} (${b})`;
 		}
 		render();
 	});

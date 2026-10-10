@@ -393,6 +393,8 @@ for (let pluginIndex = 0; pluginIndex < pluginCount; ++pluginIndex) {
 		hostLog.uiMessages = [];
 		check(uiReceive('ready'), 'UI "ready" accepted');
 		check(hostLog.uiMessages.some(m => m.startsWith('samplerate 48000')), 'UI is told the sample rate');
+		const buildMessage = hostLog.uiMessages.find(m => m.startsWith('build '));
+		check(/^build \d{4}-\d\d-\d\d [0-9a-f]{7,}\+?$/.test(buildMessage ?? ''), `UI is told the build label (${buildMessage})`);
 		check(paramList.every(p => hostLog.uiMessages.some(m => m.startsWith(`param ${p.key} `))), `UI is told all ${paramList.length} parameter values`);
 		const flushesBefore = hostLog.flushes;
 		uiReceive(`begin ${key}`); uiReceive(`set ${key} ${uiValue}`); uiReceive(`end ${key}`);

@@ -22,9 +22,17 @@ FetchContent_MakeAvailable(clap)
 
 include(cmake/wclap.cmake)
 
+# The build label shown in the plugin UIs (commit date + ID), refreshed on every build
+set(buildInfoDir ${CMAKE_BINARY_DIR}/generated/build-info)
+add_custom_target(webclap-build-info ALL
+	COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_CURRENT_LIST_DIR} -DOUTPUT=${buildInfoDir}/webclap/build-info.h -P ${CMAKE_CURRENT_LIST_DIR}/cmake/build-info.cmake
+	BYPRODUCTS ${buildInfoDir}/webclap/build-info.h
+)
+
 add_library(webclap-shared INTERFACE)
-target_include_directories(webclap-shared INTERFACE ${CMAKE_CURRENT_LIST_DIR}/shared)
+target_include_directories(webclap-shared INTERFACE ${CMAKE_CURRENT_LIST_DIR}/shared ${buildInfoDir})
 target_link_libraries(webclap-shared INTERFACE clap)
+add_dependencies(webclap-shared webclap-build-info)
 
 # ---- Milestone 0: Airwindows port ----
 

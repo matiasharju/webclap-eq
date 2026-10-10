@@ -13,7 +13,7 @@
 //
 // UI <-> plugin messages are short UTF-8 text lines, so they're easy to read while debugging:
 //   UI -> plugin:  "ready" | "poll" | "set <key> <value>" | "begin <key>" | "end <key>"
-//   plugin -> UI:  "param <key> <value>" | "samplerate <hz>"
+//   plugin -> UI:  "param <key> <value>" | "samplerate <hz>" | "build <date> <commit>"
 //
 // The UI sends "poll" regularly while it's open, and the plugin replies with anything that changed
 // (e.g. from automation).  Hosts should call `on_main_thread()` after `request_callback()` so we
@@ -23,6 +23,7 @@
 #include "clap/ext/draft/webview.h"
 
 #include "./resources.h"
+#include "webclap/build-info.h" // generated: WEBCLAP_BUILD
 
 #include <algorithm>
 #include <atomic>
@@ -505,6 +506,7 @@ private:
 		if (!uiSampleRateSent.test_and_set()) {
 			std::snprintf(message, sizeof(message), "samplerate %.17g", sampleRate);
 			uiSend(message);
+			uiSend("build " WEBCLAP_BUILD);
 		}
 		for (size_t i = 0; i < paramCount; ++i) {
 			auto &param = params[i];

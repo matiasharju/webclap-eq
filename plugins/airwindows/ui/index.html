@@ -166,6 +166,8 @@
 			state[a] = parseFloat(b);
 		} else if (command === 'samplerate') {
 			state.sampleRate = parseFloat(a);
+		} else if (command === 'build') {
+			document.querySelector('header').title = `build ${a} (${b})`; // shown as a tooltip
 		}
 		render();
 	});

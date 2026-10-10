@@ -23,7 +23,7 @@ struct Baxandall2Plugin : public webclap::Plugin {
 			.url="https://github.com/matiasharju/webclap-plugins",
 			.manual_url="https://www.airwindows.com/baxandall2/",
 			.support_url="https://github.com/matiasharju/webclap-plugins/issues",
-			.version="0.1.0",
+			.version=WEBCLAP_BUILD,
 			.description="Treble and bass tone controls, ported from Airwindows Baxandall2 (MIT)",
 			.features=features
 		};
