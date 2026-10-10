@@ -1,6 +1,6 @@
 # webclap-plugins
 
-Free, beginner-friendly audio plugins for the web, made for high-school students and teachers.
+Free, easy-to-use audio plugins for the browser-based DAWs.
 
 The plugins are [WebCLAP](https://github.com/WebCLAP) (WCLAP) modules: [CLAP](https://github.com/free-audio/clap) plugins compiled to WebAssembly, with a web-page UI. They run in browser DAWs such as [openDAW](https://opendaw.studio), with nothing to install.
 
@@ -8,16 +8,13 @@ The plugins are [WebCLAP](https://github.com/WebCLAP) (WCLAP) modules: [CLAP](ht
 
 | Bundle | Plugin | Status |
 |---|---|---|
-| `airwindows` | **Baxandall2 port**: bass and treble tone controls, ported from [Airwindows Baxandall2](https://www.airwindows.com/baxandall2/) | milestone 0 |
-| `console-eq` | **Console EQ**: British-console-style channel EQ: HPF/LPF, LF and HF (shelf/bell), LMF and HMF with Q, proportional-Q mode | first version |
+| `console-eq.wclap.tar.gz` | **Console EQ**: British-console-style channel EQ | first version |
 | | **Studio EQ**: graphical EQ with draggable bands | planned |
 
 ## Using a plugin
 
-1. Download a bundle from **https://matiasharju.github.io/webclap-plugins/** (always the latest build), or a fixed version from [Releases](https://github.com/matiasharju/webclap-plugins/releases).
-2. Load the `.wclap.tar.gz` file into your DAW (openDAW, or a test host such as [wclap.plinken.org](https://wclap.plinken.org/)) as an audio effect.
-
-The site also has a "Try the controls" demo of each plugin's UI, without sound.
+1. Download a bundle from **https://matiasharju.github.io/webclap-plugins/** (always the latest build)<!--, or a fixed version from [Releases](https://github.com/matiasharju/webclap-plugins/releases)-->.
+2. Load the `.wclap.tar.gz` file into your DAW as an audio effect.
 
 ## Building
 
